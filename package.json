@@ -12,7 +12,8 @@
   "files": [
     "index.js",
     "nilQl/wrapper.js",
-    "SecretVault/wrapper.js"
+    "SecretVault/wrapper.js",
+    "types/"
   ],
   "author": "Steph",
   "license": "MIT",
@@ -21,5 +22,12 @@
     "did-jwt": "^8.0.6",
     "dotenv": "^16.4.7",
     "uuid": "^11.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "^5.8.2"
+  },
+  "scripts": {
+    "prepublishOnly": "tsc"
   }
 }

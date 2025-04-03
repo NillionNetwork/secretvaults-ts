@@ -55,7 +55,7 @@ export class NilQLWrapper {
    * Encrypts data using the initialized secret key
    * @param {any} data - The data to encrypt
    * @throws {Error} If NilQLWrapper hasn't been initialized
-   * @returns {Promise<Array>} Array of encrypted shares
+   * @returns {Promise<string | string[] | number[] | number[][]>} Array of encrypted shares
    */
   async encrypt(data) {
     if (!this.secretKey) {
