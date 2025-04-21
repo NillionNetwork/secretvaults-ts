@@ -1,7 +1,7 @@
-import { createJWT, ES256KSigner } from 'did-jwt';
-import { Buffer } from 'buffer';
-import { NilQLWrapper } from '../nilQl/wrapper.js';
-import { v4 as uuidv4 } from 'uuid';
+import { createJWT, ES256KSigner } from "did-jwt";
+import { Buffer } from "node:buffer";
+import { NilQLWrapper } from "../nilQl/wrapper.js";
+import { v4 as uuidv4 } from "uuid";
 /**
  * SecretVaultWrapper manages distributed data storage across multiple nodes.
  * It handles node authentication, data distribution, and uses NilQLWrapper
@@ -18,8 +18,8 @@ export class SecretVaultWrapper {
     nodes,
     credentials,
     schemaId = null,
-    operation = 'store',
-    tokenExpirySeconds = 3600
+    operation = "store",
+    tokenExpirySeconds = 3600,
   ) {
     this.nodes = nodes;
     this.nodesJwt = null;
@@ -40,7 +40,7 @@ export class SecretVaultWrapper {
       this.nodes.map(async (node) => ({
         url: node.url,
         jwt: await this.generateNodeToken(node.did),
-      }))
+      })),
     );
     this.nodesJwt = nodeConfigs;
     this.nilqlWrapper = new NilQLWrapper({ nodes: this.nodes }, this.operation);
@@ -63,7 +63,7 @@ export class SecretVaultWrapper {
    * @returns {Promise<string>} JWT token
    */
   async generateNodeToken(nodeDid) {
-    const signer = ES256KSigner(Buffer.from(this.credentials.secretKey, 'hex'));
+    const signer = ES256KSigner(Buffer.from(this.credentials.secretKey, "hex"));
     const payload = {
       iss: this.credentials.orgDid,
       aud: nodeDid,
@@ -84,7 +84,7 @@ export class SecretVaultWrapper {
       this.nodes.map(async (node) => {
         const token = await this.generateNodeToken(node.did);
         return { node: node.url, token };
-      })
+      }),
     );
     return tokens;
   }
@@ -97,27 +97,27 @@ export class SecretVaultWrapper {
    * @param {object} payload - Request payload
    * @returns {Promise<object>} Response data
    */
-  async makeRequest(nodeUrl, endpoint, token, payload, method = 'POST') {
+  async makeRequest(nodeUrl, endpoint, token, payload, method = "POST") {
     try {
       const response = await fetch(`${nodeUrl}/api/v1/${endpoint}`, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        body: method === 'GET' ? null : JSON.stringify(payload),
+        body: method === "GET" ? null : JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const text = await response.text();
         throw new Error(
-          `HTTP error! status: ${response.status}, body: ${text}`
+          `HTTP error! status: ${response.status}, body: ${text}`,
         );
       }
 
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
         const data = await response.json();
         return {
           status: response.status,
@@ -130,13 +130,13 @@ export class SecretVaultWrapper {
     } catch (error) {
       console.error(
         `❌ Failed to ${method} ${endpoint} from ${nodeUrl}:`,
-        error.message
+        error.message,
       );
       const statusMatch = error.message.match(/status: (\d+)/);
       const bodyMatch = error.message.match(/body: ({.*})/);
 
       const errorJson = {
-        status: statusMatch ? parseInt(statusMatch[1]) : null,
+        status: statusMatch ? Number.parseInt(statusMatch[1]) : null,
         error: bodyMatch ? JSON.parse(bodyMatch[1]) : { errors: [error] },
       };
       return errorJson;
@@ -169,9 +169,9 @@ export class SecretVaultWrapper {
       const payload = { schema: this.schemaId };
       const result = await this.makeRequest(
         node.url,
-        'data/flush',
+        "data/flush",
         jwt,
-        payload
+        payload,
       );
       results.push({ ...result, node });
     }
@@ -189,16 +189,16 @@ export class SecretVaultWrapper {
       try {
         const result = await this.makeRequest(
           node.url,
-          'schemas',
+          "schemas",
           jwt,
           {},
-          'GET'
+          "GET",
         );
         results.push({ ...result, node });
       } catch (error) {
         console.error(
           `❌ Failed to get schemas from ${node.url}:`,
-          error.message
+          error.message,
         );
         results.push({ error, node });
       }
@@ -215,6 +215,7 @@ export class SecretVaultWrapper {
    */
   async createSchema(schema, schemaName, schemaId = null) {
     if (!schemaId) {
+      // biome-ignore lint/style/noParameterAssign: <explanation>
       schemaId = uuidv4();
     }
     const schemaPayload = {
@@ -228,9 +229,9 @@ export class SecretVaultWrapper {
       try {
         const result = await this.makeRequest(
           node.url,
-          'schemas',
+          "schemas",
           jwt,
-          schemaPayload
+          schemaPayload,
         );
         results.push({
           ...result,
@@ -241,7 +242,7 @@ export class SecretVaultWrapper {
       } catch (error) {
         console.error(
           `❌ Error while creating schema on ${node.url}:`,
-          error.message
+          error.message,
         );
         results.push({ error, node });
       }
@@ -260,12 +261,12 @@ export class SecretVaultWrapper {
       const jwt = await this.generateNodeToken(node.did);
       const result = await this.makeRequest(
         node.url,
-        `schemas`,
+        "schemas",
         jwt,
         {
           id: schemaId,
         },
-        'DELETE'
+        "DELETE",
       );
       results.push({ ...result, node, schemaId });
     }
@@ -304,9 +305,9 @@ export class SecretVaultWrapper {
         };
         const result = await this.makeRequest(
           node.url,
-          'data/create',
+          "data/create",
           jwt,
-          payload
+          payload,
         );
 
         results.push({
@@ -337,9 +338,9 @@ export class SecretVaultWrapper {
         const payload = { schema: this.schemaId, filter };
         const result = await this.makeRequest(
           node.url,
-          'data/read',
+          "data/read",
           jwt,
-          payload
+          payload,
         );
         results.push({ ...result, node });
       } catch (error) {
@@ -350,9 +351,10 @@ export class SecretVaultWrapper {
 
     // Group records across nodes by _id
     const recordGroups = results.reduce((acc, nodeResult) => {
+      // biome-ignore lint/complexity/noForEach: <explanation>
       nodeResult.data.forEach((record) => {
         const existingGroup = acc.find((group) =>
-          group.shares.some((share) => share._id === record._id)
+          group.shares.some((share) => share._id === record._id),
         );
         if (existingGroup) {
           existingGroup.shares.push(record);
@@ -367,7 +369,7 @@ export class SecretVaultWrapper {
       recordGroups.map(async (record) => {
         const recombined = await this.nilqlWrapper.unify(record.shares);
         return recombined;
-      })
+      }),
     );
     return recombinedRecords;
   }
@@ -401,9 +403,9 @@ export class SecretVaultWrapper {
         };
         const result = await this.makeRequest(
           node.url,
-          'data/update',
+          "data/update",
           jwt,
-          payload
+          payload,
         );
         results.push({ ...result, node });
       } catch (error) {
@@ -428,9 +430,9 @@ export class SecretVaultWrapper {
         const payload = { schema: this.schemaId, filter };
         const result = await this.makeRequest(
           node.url,
-          'data/delete',
+          "data/delete",
           jwt,
-          payload
+          payload,
         );
         results.push({ ...result, node });
       } catch (error) {

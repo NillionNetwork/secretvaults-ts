@@ -1,9 +1,9 @@
-import { nilql } from '@nillion/nilql';
+import { nilql } from "@nillion/nilql";
 
 // Define an enum for key types
 const KeyType = {
-  CLUSTER: 'cluster',
-  SECRET: 'secret',
+  CLUSTER: "cluster",
+  SECRET: "secret",
 };
 
 /**
@@ -19,9 +19,9 @@ const KeyType = {
 export class NilQLWrapper {
   constructor(
     cluster,
-    operation = 'store',
+    operation = "store",
     secretKey = null, // option to pass in your own secret key
-    keyType = KeyType.CLUSTER
+    keyType = KeyType.CLUSTER,
   ) {
     this.cluster = cluster;
     this.secretKey = secretKey;
@@ -40,13 +40,13 @@ export class NilQLWrapper {
     if (this.secretKey === null && this.keyType === KeyType.SECRET) {
       this.secretKey = await nilql.SecretKey.generate(
         this.cluster,
-        this.operation
+        this.operation,
       );
     }
     if (this.keyType === KeyType.CLUSTER) {
       this.secretKey = await nilql.ClusterKey.generate(
         this.cluster,
-        this.operation
+        this.operation,
       );
     }
   }
@@ -59,7 +59,7 @@ export class NilQLWrapper {
    */
   async encrypt(data) {
     if (!this.secretKey) {
-      throw new Error('NilQLWrapper not initialized. Call init() first.');
+      throw new Error("NilQLWrapper not initialized. Call init() first.");
     }
     const shares = await nilql.encrypt(this.secretKey, data);
     return shares;
@@ -73,7 +73,7 @@ export class NilQLWrapper {
    */
   async decrypt(shares) {
     if (!this.secretKey) {
-      throw new Error('NilQLWrapper not initialized. Call init() first.');
+      throw new Error("NilQLWrapper not initialized. Call init() first.");
     }
     const decryptedData = await nilql.decrypt(this.secretKey, shares);
     return decryptedData;
@@ -94,21 +94,21 @@ export class NilQLWrapper {
    */
   async prepareAndAllot(data) {
     if (!this.secretKey) {
-      throw new Error('NilQLWrapper not initialized. Call init() first.');
+      throw new Error("NilQLWrapper not initialized. Call init() first.");
     }
 
     const encryptDeep = async (obj) => {
-      if (typeof obj !== 'object' || obj === null) {
+      if (typeof obj !== "object" || obj === null) {
         return obj;
       }
 
       const encrypted = Array.isArray(obj) ? [] : {};
 
       for (const [key, value] of Object.entries(obj)) {
-        if (typeof value === 'object' && value !== null) {
-          if ('%allot' in value) {
+        if (typeof value === "object" && value !== null) {
+          if ("%allot" in value) {
             encrypted[key] = {
-              '%allot': await nilql.encrypt(this.secretKey, value['%allot']),
+              "%allot": await nilql.encrypt(this.secretKey, value["%allot"]),
             };
           } else {
             encrypted[key] = await encryptDeep(value); // Recurse into nested objects
@@ -132,7 +132,7 @@ export class NilQLWrapper {
    */
   async unify(shares) {
     if (!this.secretKey) {
-      throw new Error('NilQLWrapper not initialized. Call init() first.');
+      throw new Error("NilQLWrapper not initialized. Call init() first.");
     }
     const unifiedResult = await nilql.unify(this.secretKey, shares);
     return unifiedResult;
