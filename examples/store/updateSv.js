@@ -1,5 +1,5 @@
 import { SecretVaultWrapper } from "secretvaults";
-import { orgConfig } from "./orgConfig.js";
+import { orgConfig } from "../orgConfig.js";
 
 // update schema id and record id to update with your own values
 const SCHEMA_ID = "d8cbedef-e12a-468e-b5cf-caba3172afad";

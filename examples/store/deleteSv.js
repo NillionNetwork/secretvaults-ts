@@ -1,5 +1,5 @@
 import { SecretVaultWrapper } from "secretvaults";
-import { orgConfig } from "./orgConfig.js";
+import { orgConfig } from "../orgConfig.js";
 
 // update schema id and record id to delete with your own values
 const SCHEMA_ID = "d8cbedef-e12a-468e-b5cf-caba3172afad";
@@ -22,10 +22,7 @@ async function main() {
     console.log("📚 Read original record:", readOriginalRecord);
 
     const deletedData = await collection.deleteDataFromNodes(filterById);
-
     console.log("📚 Deleted record from all nodes:", deletedData);
-
-    // await collection.flushData();
   } catch (error) {
     console.error("❌ Failed to use SecretVaultWrapper:", error.message);
     process.exit(1);

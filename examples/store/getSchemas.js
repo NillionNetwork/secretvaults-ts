@@ -1,5 +1,5 @@
 import { SecretVaultWrapper } from "secretvaults";
-import { orgConfig } from "./orgConfig.js";
+import { orgConfig } from "../orgConfig.js";
 
 async function main() {
   try {

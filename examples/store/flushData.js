@@ -1,8 +1,8 @@
 import { SecretVaultWrapper } from "secretvaults";
-import { orgConfig } from "./orgConfig.js";
+import { orgConfig } from "../orgConfig.js";
 
-// update schema id with your own value
-const SCHEMA_ID = "84b5c56c-e1f5-4772-aab6-6804a1a0ecd7";
+// update schema id  with your own values
+const SCHEMA_ID = "d8cbedef-e12a-468e-b5cf-caba3172afad";
 
 async function main() {
   try {
@@ -13,8 +13,8 @@ async function main() {
     );
     await collection.init();
 
-    const deleted = await collection.deleteSchema(SCHEMA_ID);
-    console.log("deleted", deleted);
+    const flushedData = await collection.flushData();
+    console.log("📚 Flushed data:", flushedData);
   } catch (error) {
     console.error("❌ Failed to use SecretVaultWrapper:", error.message);
     process.exit(1);
