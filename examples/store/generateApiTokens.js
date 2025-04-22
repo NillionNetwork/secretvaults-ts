@@ -3,7 +3,6 @@ import { orgConfig } from "../orgConfig.js";
 
 async function main() {
   try {
-    console.log(orgConfig);
     const org = new SecretVaultWrapper(
       orgConfig.nodes,
       orgConfig.orgCredentials,
