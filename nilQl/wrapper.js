@@ -1,9 +1,16 @@
 import { nilql } from "@nillion/nilql";
 
 // Define an enum for key types
-const KeyType = {
+export const KeyType = {
   CLUSTER: "cluster",
   SECRET: "secret",
+};
+
+// Define an enum for operations types
+export const OperationType = {
+  STORE: "store",
+  SUM: "sum",
+  MATCH: "match",
 };
 
 /**
@@ -19,7 +26,7 @@ const KeyType = {
 export class NilQLWrapper {
   constructor(
     cluster,
-    operation = "store",
+    operation = OperationType.STORE,
     secretKey = null, // option to pass in your own secret key
     keyType = KeyType.CLUSTER,
   ) {
