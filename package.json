@@ -4,16 +4,15 @@
   "description": "Wrappers for Nillion's Secret Vaults and nilQL",
   "main": "index.js",
   "type": "module",
+  "scripts": {
+    "install-hooks": "lefthook install"
+  },
   "exports": {
     ".": {
       "import": "./index.js"
     }
   },
-  "files": [
-    "index.js",
-    "nilQl/wrapper.js",
-    "SecretVault/wrapper.js"
-  ],
+  "files": ["index.js", "nilQl/wrapper.js", "SecretVault/wrapper.js"],
   "author": "Steph",
   "license": "MIT",
   "dependencies": {
@@ -21,5 +20,9 @@
     "did-jwt": "^8.0.6",
     "dotenv": "^16.4.7",
     "uuid": "^11.0.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "lefthook": "^1.11.11"
   }
 }
