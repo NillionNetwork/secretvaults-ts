@@ -28,10 +28,12 @@ export class NilQLWrapper {
     cluster,
     operation = OperationType.STORE,
     secretKey = null, // option to pass in your own secret key
+    secretKeySeed = null,
     keyType = KeyType.CLUSTER,
   ) {
     this.cluster = cluster;
     this.secretKey = secretKey;
+    this.secretKeySeed = secretKeySeed;
     this.operation = {
       [operation]: true,
     };
@@ -44,17 +46,32 @@ export class NilQLWrapper {
    * @returns {Promise<void>}
    */
   async init() {
-    if (this.secretKey === null && this.keyType === KeyType.SECRET) {
+    // Create secretKey from secretKeySeed, if provided
+    if (this.secretKeySeed && this.secretKey === null) {
       this.secretKey = await nilql.SecretKey.generate(
         this.cluster,
         this.operation,
+        this.secretKeySeed,
       );
     }
-    if (this.keyType === KeyType.CLUSTER) {
-      this.secretKey = await nilql.ClusterKey.generate(
-        this.cluster,
-        this.operation,
-      );
+
+    if (this.secretKey === null) {
+      switch (this.keyType) {
+        case KeyType.SECRET:
+          this.secretKey = await nilql.SecretKey.generate(
+            this.cluster,
+            this.operation,
+          );
+          break;
+        case KeyType.CLUSTER:
+          this.secretKey = await nilql.ClusterKey.generate(
+            this.cluster,
+            this.operation,
+          );
+          break;
+        default:
+          throw new Error("Unsupported key type");
+      }
     }
   }
 

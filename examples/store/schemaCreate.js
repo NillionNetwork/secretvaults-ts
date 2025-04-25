@@ -1,6 +1,6 @@
 import { SecretVaultWrapper } from "secretvaults";
 import { orgConfig } from "../orgConfig.js";
-import schema from "./schema.json" assert { type: "json" };
+import schema from "./schema.json" with { type: "json" };
 
 async function main() {
   try {
