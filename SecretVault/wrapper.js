@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import { ES256KSigner, createJWT } from "did-jwt";
 import { v4 as uuidv4 } from "uuid";
-import { NilQLWrapper, OperationType } from "../nilQl/wrapper.js";
+import { KeyType, NilQLWrapper, OperationType } from "../nilQl/wrapper.js";
 
 /**
  * SecretVaultWrapper manages distributed data storage across multiple nodes.
@@ -20,6 +20,8 @@ export class SecretVaultWrapper {
     credentials,
     schemaId = null,
     operation = OperationType.STORE,
+    secretKey = null,
+    secretKeySeed = null,
     tokenExpirySeconds = 3600,
   ) {
     this.nodes = nodes;
@@ -28,6 +30,8 @@ export class SecretVaultWrapper {
     this.schemaId = schemaId;
     this.operation = operation;
     this.tokenExpirySeconds = tokenExpirySeconds;
+    this.secretKey = secretKey;
+    this.secretKeySeed = secretKeySeed;
     this.nilqlWrapper = null;
   }
 
@@ -44,7 +48,16 @@ export class SecretVaultWrapper {
       })),
     );
     this.nodesJwt = nodeConfigs;
-    this.nilqlWrapper = new NilQLWrapper({ nodes: this.nodes }, this.operation);
+    // Determine keyType
+    const keyType =
+      this.secretKey || this.secretKeySeed ? KeyType.SECRET : KeyType.CLUSTER;
+    this.nilqlWrapper = new NilQLWrapper(
+      { nodes: this.nodes },
+      this.operation,
+      this.secretKey,
+      this.secretKeySeed,
+      keyType,
+    );
     await this.nilqlWrapper.init();
     return this.nilqlWrapper;
   }
