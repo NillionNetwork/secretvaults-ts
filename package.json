@@ -1,6 +1,6 @@
 {
   "name": "secretvaults",
-  "version": "0.0.0-alpha.1",
+  "version": "0.0.0-alpha.2",
   "description": "Wrappers for Nillion's Secret Vaults and nilQL",
   "main": "index.js",
   "type": "module",
