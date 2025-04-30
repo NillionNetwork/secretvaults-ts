@@ -7,11 +7,10 @@
   "license": "AGPL-version-3.0",
   "private": false,
   "engines": {
-    "node": ">= 14.0.0",
-    "npm": ">= 6.0.0"
+    "node": ">=20"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
-    "secretvaults": "../"
+    "secretvaults": "file:.."
   }
 }

@@ -1,4 +1,4 @@
-import { NilQLWrapper } from 'secretvaults';
+import { NilQLWrapper } from "secretvaults";
 
 /**
  * This is a standalone example of using NilQLWrapper to encrypt and decrypt data.
@@ -17,28 +17,28 @@ async function main() {
 
   try {
     // Initialize wrapper with cluster config
-    console.log('Initializing NilQLWrapper...');
+    console.log("Initializing NilQLWrapper...");
     const encryptionWrapper = new NilQLWrapper(cluster);
     await encryptionWrapper.init();
-    console.log('NilQLWrapper initialized successfully');
+    console.log("NilQLWrapper initialized successfully");
 
-    console.log('\nOriginal data:', secretData);
+    console.log("\nOriginal data:", secretData);
 
     // Encrypt data into multiple shares
-    console.log('\nEncrypting data...');
+    console.log("\nEncrypting data...");
     const shares = await encryptionWrapper.encrypt(secretData);
-    console.log('Data encrypted into shares:', shares);
+    console.log("Data encrypted into shares:", shares);
 
     // Decrypt shares back into original data
-    console.log('\nDecrypting shares...');
+    console.log("\nDecrypting shares...");
     const decryptedData = await encryptionWrapper
       .decrypt(shares)
       .then((data) => data);
 
     // Convert decrypted string back to number
-    console.log('Decrypted data:', Number(decryptedData));
+    console.log("Decrypted data:", Number(decryptedData));
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error("Error:", error.message);
   }
 }
 

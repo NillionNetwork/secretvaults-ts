@@ -84,7 +84,7 @@ cp .env.example .env
 Run example to encrypt and upload data to all nodes, then read data from nodes.
 
 ```
-node examples/readWriteSv.js
+node examples/store/readWriteSv.js
 ```
 
 Basic setup

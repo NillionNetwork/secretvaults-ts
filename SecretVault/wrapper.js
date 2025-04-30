@@ -1,7 +1,8 @@
-import { createJWT, ES256KSigner } from 'did-jwt';
-import { Buffer } from 'buffer';
-import { NilQLWrapper } from '../nilQl/wrapper.js';
-import { v4 as uuidv4 } from 'uuid';
+import { Buffer } from "node:buffer";
+import { ES256KSigner, createJWT } from "did-jwt";
+import { v4 as uuidv4 } from "uuid";
+import { KeyType, NilQLWrapper, OperationType } from "../nilQl/wrapper.js";
+
 /**
  * SecretVaultWrapper manages distributed data storage across multiple nodes.
  * It handles node authentication, data distribution, and uses NilQLWrapper
@@ -18,8 +19,10 @@ export class SecretVaultWrapper {
     nodes,
     credentials,
     schemaId = null,
-    operation = 'store',
-    tokenExpirySeconds = 3600
+    operation = OperationType.STORE,
+    secretKey = null,
+    secretKeySeed = null,
+    tokenExpirySeconds = 3600,
   ) {
     this.nodes = nodes;
     this.nodesJwt = null;
@@ -27,6 +30,8 @@ export class SecretVaultWrapper {
     this.schemaId = schemaId;
     this.operation = operation;
     this.tokenExpirySeconds = tokenExpirySeconds;
+    this.secretKey = secretKey;
+    this.secretKeySeed = secretKeySeed;
     this.nilqlWrapper = null;
   }
 
@@ -40,10 +45,19 @@ export class SecretVaultWrapper {
       this.nodes.map(async (node) => ({
         url: node.url,
         jwt: await this.generateNodeToken(node.did),
-      }))
+      })),
     );
     this.nodesJwt = nodeConfigs;
-    this.nilqlWrapper = new NilQLWrapper({ nodes: this.nodes }, this.operation);
+    // Determine keyType
+    const keyType =
+      this.secretKey || this.secretKeySeed ? KeyType.SECRET : KeyType.CLUSTER;
+    this.nilqlWrapper = new NilQLWrapper(
+      { nodes: this.nodes },
+      this.operation,
+      this.secretKey,
+      this.secretKeySeed,
+      keyType,
+    );
     await this.nilqlWrapper.init();
     return this.nilqlWrapper;
   }
@@ -63,7 +77,7 @@ export class SecretVaultWrapper {
    * @returns {Promise<string>} JWT token
    */
   async generateNodeToken(nodeDid) {
-    const signer = ES256KSigner(Buffer.from(this.credentials.secretKey, 'hex'));
+    const signer = ES256KSigner(Buffer.from(this.credentials.secretKey, "hex"));
     const payload = {
       iss: this.credentials.orgDid,
       aud: nodeDid,
@@ -84,7 +98,7 @@ export class SecretVaultWrapper {
       this.nodes.map(async (node) => {
         const token = await this.generateNodeToken(node.did);
         return { node: node.url, token };
-      })
+      }),
     );
     return tokens;
   }
@@ -97,27 +111,27 @@ export class SecretVaultWrapper {
    * @param {object} payload - Request payload
    * @returns {Promise<object>} Response data
    */
-  async makeRequest(nodeUrl, endpoint, token, payload, method = 'POST') {
+  async makeRequest(nodeUrl, endpoint, token, payload, method = "POST") {
     try {
       const response = await fetch(`${nodeUrl}/api/v1/${endpoint}`, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        body: method === 'GET' ? null : JSON.stringify(payload),
+        body: method === "GET" ? null : JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const text = await response.text();
         throw new Error(
-          `HTTP error! status: ${response.status}, body: ${text}`
+          `HTTP error! status: ${response.status}, body: ${text}`,
         );
       }
 
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
         const data = await response.json();
         return {
           status: response.status,
@@ -130,13 +144,13 @@ export class SecretVaultWrapper {
     } catch (error) {
       console.error(
         `❌ Failed to ${method} ${endpoint} from ${nodeUrl}:`,
-        error.message
+        error.message,
       );
       const statusMatch = error.message.match(/status: (\d+)/);
       const bodyMatch = error.message.match(/body: ({.*})/);
 
       const errorJson = {
-        status: statusMatch ? parseInt(statusMatch[1]) : null,
+        status: statusMatch ? Number.parseInt(statusMatch[1]) : null,
         error: bodyMatch ? JSON.parse(bodyMatch[1]) : { errors: [error] },
       };
       return errorJson;
@@ -162,18 +176,46 @@ export class SecretVaultWrapper {
    * @returns {Promise<array>} Array of flush results from each node
    */
   async flushData() {
-    const results = [];
-    for (const node of this.nodes) {
-      const jwt = await this.generateNodeToken(node.did);
-      const payload = { schema: this.schemaId };
-      const result = await this.makeRequest(
-        node.url,
-        'data/flush',
-        jwt,
-        payload
-      );
-      results.push({ ...result, node });
-    }
+    const payload = { schema: this.schemaId };
+
+    const flushDataFromNode = async (node) => {
+      try {
+        const jwt = await this.generateNodeToken(node.did);
+        const result = await this.makeRequest(
+          node.url,
+          "data/flush",
+          jwt,
+          payload,
+        );
+        return { result, node };
+      } catch (error) {
+        console.error(
+          `❌ Error while flushing data on ${node.url}:`,
+          error.message,
+        );
+        throw { error, node };
+      }
+    };
+
+    const settledResults = await Promise.allSettled(
+      this.nodes.map((node) => flushDataFromNode(node)),
+    );
+
+    const results = settledResults.map((settledResult) => {
+      if (settledResult.status === "fulfilled") {
+        return {
+          ...settledResult.value.result,
+          node: settledResult.value.node,
+        };
+      }
+      if (settledResult.status === "rejected") {
+        return {
+          error: settledResult.reason.error,
+          node: settledResult.reason.node,
+        };
+      }
+    });
+
     return results;
   }
 
@@ -183,25 +225,27 @@ export class SecretVaultWrapper {
    */
   async getSchemas() {
     const results = [];
+    // @TODO: Get schema from only the first node (assume parity)
     for (const node of this.nodes) {
       const jwt = await this.generateNodeToken(node.did);
       try {
         const result = await this.makeRequest(
           node.url,
-          'schemas',
+          "schemas",
           jwt,
           {},
-          'GET'
+          "GET",
         );
         results.push({ ...result, node });
       } catch (error) {
         console.error(
           `❌ Failed to get schemas from ${node.url}:`,
-          error.message
+          error.message,
         );
         results.push({ error, node });
       }
     }
+
     return results;
   }
 
@@ -214,37 +258,56 @@ export class SecretVaultWrapper {
    */
   async createSchema(schema, schemaName, schemaId = null) {
     if (!schemaId) {
+      // biome-ignore lint/style/noParameterAssign: <explanation>
       schemaId = uuidv4();
     }
+
     const schemaPayload = {
       _id: schemaId,
       name: schemaName,
       schema,
     };
-    const results = [];
-    for (const node of this.nodes) {
-      const jwt = await this.generateNodeToken(node.did);
+
+    const createSchemaForNode = async (node) => {
       try {
+        const jwt = await this.generateNodeToken(node.did);
         const result = await this.makeRequest(
           node.url,
-          'schemas',
+          "schemas",
           jwt,
-          schemaPayload
+          schemaPayload,
         );
-        results.push({
-          ...result,
-          node,
-          schemaId,
-          name: schemaName,
-        });
+        return { result, node };
       } catch (error) {
         console.error(
           `❌ Error while creating schema on ${node.url}:`,
-          error.message
+          error.message,
         );
-        results.push({ error, node });
+        throw { error, node };
       }
-    }
+    };
+
+    const settledResults = await Promise.allSettled(
+      this.nodes.map((node) => createSchemaForNode(node)),
+    );
+
+    const results = settledResults.map((settledResult) => {
+      if (settledResult.status === "fulfilled") {
+        return {
+          ...settledResult.value.result,
+          node: settledResult.value.node,
+          schemaId,
+          name: schemaName,
+        };
+      }
+      if (settledResult.status === "rejected") {
+        return {
+          error: settledResult.reason.error,
+          node: settledResult.reason.node,
+        };
+      }
+    });
+
     return results;
   }
 
@@ -254,20 +317,50 @@ export class SecretVaultWrapper {
    * @returns {Promise<array>} Array of deletion results from each node
    */
   async deleteSchema(schemaId) {
-    const results = [];
-    for (const node of this.nodes) {
-      const jwt = await this.generateNodeToken(node.did);
-      const result = await this.makeRequest(
-        node.url,
-        `schemas`,
-        jwt,
-        {
-          id: schemaId,
-        },
-        'DELETE'
-      );
-      results.push({ ...result, node, schemaId });
-    }
+    const payload = {
+      id: schemaId,
+    };
+
+    const deleteSchemaFromNode = async (node) => {
+      try {
+        const jwt = await this.generateNodeToken(node.did);
+        const result = await this.makeRequest(
+          node.url,
+          "schemas",
+          jwt,
+          payload,
+          "DELETE",
+        );
+        return { result, node };
+      } catch (error) {
+        console.error(
+          `❌ Error while deleting schema from ${node.url}:`,
+          error.message,
+        );
+        throw { error, node };
+      }
+    };
+
+    const settledResults = await Promise.allSettled(
+      this.nodes.map((node) => deleteSchemaFromNode(node)),
+    );
+
+    const results = settledResults.map((settledResult) => {
+      if (settledResult.status === "fulfilled") {
+        return {
+          ...settledResult.value.result,
+          node: settledResult.value.node,
+          schemaId,
+        };
+      }
+      if (settledResult.status === "rejected") {
+        return {
+          error: settledResult.reason.error,
+          node: settledResult.reason.node,
+        };
+      }
+    });
+
     return results;
   }
 
@@ -285,39 +378,52 @@ export class SecretVaultWrapper {
       return record;
     });
     const transformedData = await this.allotData(idData);
-    const results = [];
 
-    for (let i = 0; i < this.nodes.length; i++) {
-      const node = this.nodes[i];
+    const writeDataToNode = async (node, index) => {
       try {
-        const nodeData = transformedData.map((encryptedShares) => {
-          if (encryptedShares.length !== this.nodes.length) {
-            return encryptedShares[0];
-          }
-          return encryptedShares[i];
-        });
         const jwt = await this.generateNodeToken(node.did);
+        const nodeData = transformedData.map((encryptedShares) =>
+          encryptedShares.length !== this.nodes.length
+            ? encryptedShares[0]
+            : encryptedShares[index],
+        );
         const payload = {
           schema: this.schemaId,
           data: nodeData,
         };
+
         const result = await this.makeRequest(
           node.url,
-          'data/create',
+          "data/create",
           jwt,
-          payload
+          payload,
         );
-
-        results.push({
-          ...result,
-          node,
-          schemaId: this.schemaId,
-        });
+        return { result, node };
       } catch (error) {
         console.error(`❌ Failed to write to ${node.url}:`, error.message);
-        results.push({ node, error });
+        throw { error, node };
       }
-    }
+    };
+
+    const settledResults = await Promise.allSettled(
+      this.nodes.map((node, index) => writeDataToNode(node, index)),
+    );
+
+    const results = settledResults.map((settledResult) => {
+      if (settledResult.status === "fulfilled") {
+        return {
+          ...settledResult.value.result,
+          node: settledResult.value.node,
+          schemaId: this.schemaId,
+        };
+      }
+      if (settledResult.status === "rejected") {
+        return {
+          error: settledResult.reason.error,
+          node: settledResult.reason.node,
+        };
+      }
+    });
 
     return results;
   }
@@ -328,37 +434,57 @@ export class SecretVaultWrapper {
    * @returns {Promise<array>} Array of decrypted records
    */
   async readFromNodes(filter = {}) {
-    const results = [];
+    const payload = { schema: this.schemaId, filter };
 
-    for (const node of this.nodes) {
+    const readDataFromNode = async (node) => {
       try {
         const jwt = await this.generateNodeToken(node.did);
-        const payload = { schema: this.schemaId, filter };
         const result = await this.makeRequest(
           node.url,
-          'data/read',
+          "data/read",
           jwt,
-          payload
+          payload,
         );
-        results.push({ ...result, node });
+        return { result, node };
       } catch (error) {
         console.error(`❌ Failed to read from ${node.url}:`, error.message);
-        results.push({ error, node });
+        throw { error, node };
       }
-    }
+    };
+
+    const settledResults = await Promise.allSettled(
+      this.nodes.map((node) => readDataFromNode(node)),
+    );
+
+    const results = settledResults.map((settledResult) => {
+      if (settledResult.status === "fulfilled") {
+        return {
+          ...settledResult.value.result,
+          node: settledResult.value.node,
+        };
+      }
+      if (settledResult.status === "rejected") {
+        return {
+          error: settledResult.reason.error,
+          node: settledResult.reason.node,
+        };
+      }
+    });
 
     // Group records across nodes by _id
     const recordGroups = results.reduce((acc, nodeResult) => {
-      nodeResult.data.forEach((record) => {
-        const existingGroup = acc.find((group) =>
-          group.shares.some((share) => share._id === record._id)
-        );
-        if (existingGroup) {
-          existingGroup.shares.push(record);
-        } else {
-          acc.push({ shares: [record], recordIndex: record._id });
+      if (nodeResult.data) {
+        for (const record of nodeResult.data) {
+          const existingGroup = acc.find((group) =>
+            group.shares.some((share) => share._id === record._id),
+          );
+          if (existingGroup) {
+            existingGroup.shares.push(record);
+          } else {
+            acc.push({ shares: [record], recordIndex: record._id });
+          }
         }
-      });
+      }
       return acc;
     }, []);
 
@@ -366,7 +492,7 @@ export class SecretVaultWrapper {
       recordGroups.map(async (record) => {
         const recombined = await this.nilqlWrapper.unify(record.shares);
         return recombined;
-      })
+      }),
     );
     return recombinedRecords;
   }
@@ -378,19 +504,16 @@ export class SecretVaultWrapper {
    * @returns {Promise<array>} Array of update results from each node
    */
   async updateDataToNodes(recordUpdate, filter = {}) {
-    const results = [];
-
     const transformedData = await this.allotData([recordUpdate]);
-    for (let i = 0; i < this.nodes.length; i++) {
-      const node = this.nodes[i];
+
+    const updateDataOnNode = async (node, index) => {
       try {
-        const [nodeData] = transformedData.map((encryptedShares) => {
-          if (encryptedShares.length !== this.nodes.length) {
-            return encryptedShares[0];
-          }
-          return encryptedShares[i];
-        });
         const jwt = await this.generateNodeToken(node.did);
+        const [nodeData] = transformedData.map((encryptedShares) =>
+          encryptedShares.length !== this.nodes.length
+            ? encryptedShares[0]
+            : encryptedShares[index],
+        );
         const payload = {
           schema: this.schemaId,
           update: {
@@ -398,18 +521,39 @@ export class SecretVaultWrapper {
           },
           filter,
         };
+
         const result = await this.makeRequest(
           node.url,
-          'data/update',
+          "data/update",
           jwt,
-          payload
+          payload,
         );
-        results.push({ ...result, node });
+        return { result, node };
       } catch (error) {
         console.error(`❌ Failed to write to ${node.url}:`, error.message);
-        results.push({ error, node });
+        throw { error, node };
       }
-    }
+    };
+
+    const settledResults = await Promise.allSettled(
+      this.nodes.map((node, index) => updateDataOnNode(node, index)),
+    );
+
+    const results = settledResults.map((settledResult) => {
+      if (settledResult.status === "fulfilled") {
+        return {
+          ...settledResult.value.result,
+          node: settledResult.value.node,
+        };
+      }
+      if (settledResult.status === "rejected") {
+        return {
+          error: settledResult.reason.error,
+          node: settledResult.reason.node,
+        };
+      }
+    });
+
     return results;
   }
 
@@ -419,24 +563,43 @@ export class SecretVaultWrapper {
    * @returns {Promise<array>} Array of deletion results from each node
    */
   async deleteDataFromNodes(filter = {}) {
-    const results = [];
+    const payload = { schema: this.schemaId, filter };
 
-    for (const node of this.nodes) {
+    const deleteDataFromNode = async (node) => {
       try {
         const jwt = await this.generateNodeToken(node.did);
-        const payload = { schema: this.schemaId, filter };
         const result = await this.makeRequest(
           node.url,
-          'data/delete',
+          "data/delete",
           jwt,
-          payload
+          payload,
         );
-        results.push({ ...result, node });
+        return { result, node };
       } catch (error) {
         console.error(`❌ Failed to delete from ${node.url}:`, error.message);
-        results.push({ error, node });
+        throw { error, node };
       }
-    }
+    };
+
+    const settledResults = await Promise.allSettled(
+      this.nodes.map((node) => deleteDataFromNode(node)),
+    );
+
+    const results = settledResults.map((settledResult) => {
+      if (settledResult.status === "fulfilled") {
+        return {
+          ...settledResult.value.result,
+          node: settledResult.value.node,
+        };
+      }
+      if (settledResult.status === "rejected") {
+        return {
+          error: settledResult.reason.error,
+          node: settledResult.reason.node,
+        };
+      }
+    });
+
     return results;
   }
 }
