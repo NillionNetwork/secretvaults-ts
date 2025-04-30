@@ -1,18 +1,19 @@
 {
   "name": "secretvaults",
-  "version": "0.0.0-alpha.1",
+  "version": "0.0.0-alpha.2",
   "description": "Wrappers for Nillion's Secret Vaults and nilQL",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "install-hooks": "lefthook install"
+    "install-hooks": "lefthook install",
+    "prepublishOnly": "tsc"
   },
   "exports": {
     ".": {
       "import": "./index.js"
     }
   },
-  "files": ["index.js", "nilQl/wrapper.js", "SecretVault/wrapper.js"],
+  "files": ["index.js", "nilQl/wrapper.js", "SecretVault/wrapper.js", "types/"],
   "author": "Steph",
   "license": "MIT",
   "dependencies": {
@@ -22,6 +23,8 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "^5.8.2",
     "@biomejs/biome": "1.9.4",
     "lefthook": "^1.11.11"
   }

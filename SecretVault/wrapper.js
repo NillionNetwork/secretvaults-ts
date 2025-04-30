@@ -160,7 +160,6 @@ export class SecretVaultWrapper {
   /**
    * Transforms data by encrypting specified fields across all nodes
    * @param {object|array} data - Data to transform
-   * @param {array} fieldsToEncrypt - Fields to encrypt
    * @returns {Promise<array>} Array of transformed data for each node
    */
   async allotData(data) {
