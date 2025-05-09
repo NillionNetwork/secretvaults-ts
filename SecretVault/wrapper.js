@@ -268,7 +268,7 @@ export class SecretVaultWrapper {
       schema,
     };
 
-    const createSchemaForNode = async (node) => {
+    const createSchemaOnNode = async (node) => {
       try {
         const jwt = await this.generateNodeToken(node.did);
         const result = await this.makeRequest(
@@ -288,7 +288,7 @@ export class SecretVaultWrapper {
     };
 
     const settledResults = await Promise.allSettled(
-      this.nodes.map((node) => createSchemaForNode(node)),
+      this.nodes.map((node) => createSchemaOnNode(node)),
     );
 
     const results = settledResults.map((settledResult) => {
@@ -590,6 +590,199 @@ export class SecretVaultWrapper {
         return {
           ...settledResult.value.result,
           node: settledResult.value.node,
+        };
+      }
+      if (settledResult.status === "rejected") {
+        return {
+          error: settledResult.reason.error,
+          node: settledResult.reason.node,
+        };
+      }
+    });
+
+    return results;
+  }
+
+  /**
+   * Creates a query on all nodes
+   * @param {object} query - The query to create
+   * @param {string} queryName - The name of the query
+   * @param {string} schemaId - The schema ID the query will be based on
+   * @param {string} queryId -  Optional: A custom query ID. If not provided, a new UUID is generated
+   * @returns {Promise<array>} Array of creation results from each node
+   */
+  async createQuery(query, queryName, schemaId, queryId = null) {
+    if (!queryId) {
+      // biome-ignore lint/style/noParameterAssign: <explanation>
+      queryId = uuidv4();
+    }
+
+    const queryPayload = {
+      _id: queryId,
+      name: queryName,
+      schema: schemaId,
+      variables: query.variables,
+      pipeline: query.pipeline,
+    };
+
+    const createQueryOnNode = async (node) => {
+      try {
+        const jwt = await this.generateNodeToken(node.did);
+        const result = await this.makeRequest(
+          node.url,
+          "queries",
+          jwt,
+          queryPayload,
+        );
+        return { result, node };
+      } catch (error) {
+        console.error(
+          `❌ Error while creating query on ${node.url}:`,
+          error.message,
+        );
+        throw { error, node };
+      }
+    };
+
+    const settledResults = await Promise.allSettled(
+      this.nodes.map((node) => createQueryOnNode(node)),
+    );
+
+    const results = settledResults.map((settledResult) => {
+      if (settledResult.status === "fulfilled") {
+        return {
+          ...settledResult.value.result,
+          node: settledResult.value.node,
+          queryId,
+          schemaId,
+          name: queryName,
+        };
+      }
+      if (settledResult.status === "rejected") {
+        return {
+          error: settledResult.reason.error,
+          node: settledResult.reason.node,
+        };
+      }
+    });
+
+    return results;
+  }
+
+  /**
+   * Executes a query on a single node and returns the results
+   * @param {object} node - The target node to execute on
+   * @param {object} queryPayload - The query payload to execute
+   * @returns {Promise<object>} The execute response from a single node
+   */
+  async executeQueryOnNode(node, queryPayload) {
+    try {
+      const jwt = await this.generateNodeToken(node.did);
+      const result = await this.makeRequest(
+        node.url,
+        "queries/execute",
+        jwt,
+        queryPayload,
+      );
+      return { result, node };
+    } catch (error) {
+      console.error(
+        `❌ Error while executing query on ${node.url}:`,
+        error.message,
+      );
+      throw { error, node };
+    }
+  }
+
+  /**
+   * Executes a query on all nodes and unifies the results
+   * @param {object} queryPayload - The query payload to execute
+   * @returns {Promise<array>} Array of of unified records resulting from executing the query across all nodes
+   */
+  async executeQueryOnNodes(queryPayload) {
+    const settledResults = await Promise.allSettled(
+      this.nodes.map((node) => this.executeQueryOnNode(node, queryPayload)),
+    );
+
+    const results = settledResults.map((settledResult) => {
+      if (settledResult.status === "fulfilled") {
+        return {
+          ...settledResult.value.result,
+          node: settledResult.value.node,
+        };
+      }
+      if (settledResult.status === "rejected") {
+        return {
+          error: settledResult.reason.error,
+          node: settledResult.reason.node,
+        };
+      }
+    });
+
+    // Group records across nodes by _id
+    const recordGroups = results.reduce((acc, nodeResult) => {
+      if (nodeResult.data) {
+        for (const record of nodeResult.data) {
+          const existingGroup = acc.find((group) =>
+            group.shares.some((share) => share._id === record._id),
+          );
+          if (existingGroup) {
+            existingGroup.shares.push(record);
+          } else {
+            acc.push({ shares: [record], recordIndex: record._id });
+          }
+        }
+      }
+      return acc;
+    }, []);
+
+    const recombinedRecords = await Promise.all(
+      recordGroups.map(async (record) => {
+        const recombined = await this.nilqlWrapper.unify(record.shares);
+        return recombined;
+      }),
+    );
+    return recombinedRecords;
+  }
+
+  /**
+   * Deletes a query from all nodes
+   * @param {string} queryId - The ID of the query to delete
+   * @returns {Promise<array>} Array of deletion results from each node
+   */
+  async deleteQuery(queryId) {
+    const payload = { id: queryId };
+
+    const deleteQueryFromNode = async (node) => {
+      try {
+        const jwt = await this.generateNodeToken(node.did);
+        const result = await this.makeRequest(
+          node.url,
+          "queries",
+          jwt,
+          payload,
+          "DELETE",
+        );
+        return { result, node };
+      } catch (error) {
+        console.error(
+          `❌ Error while deleting query from ${node.url}:`,
+          error.message,
+        );
+        throw { error, node };
+      }
+    };
+
+    const settledResults = await Promise.allSettled(
+      this.nodes.map((node) => deleteQueryFromNode(node)),
+    );
+
+    const results = settledResults.map((settledResult) => {
+      if (settledResult.status === "fulfilled") {
+        return {
+          ...settledResult.value.result,
+          node: settledResult.value.node,
+          queryId,
         };
       }
       if (settledResult.status === "rejected") {
