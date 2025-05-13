@@ -367,17 +367,23 @@ export class SecretVaultWrapper {
   /**
    * Writes data to all nodes, with optional field encryption
    * @param {array} data - Data to write
+   * @param {boolean} [allotData=true] - Whether to allot the data before writing. If `false`, you need to ensure that the `data` has an `_id` field
    * @returns {Promise<array>} Array of write results from each node
    */
-  async writeToNodes(data) {
-    // add a _id field to each record if it doesn't exist
-    const idData = data.map((record) => {
-      if (!record._id) {
-        return { ...record, _id: uuidv4() };
-      }
-      return record;
-    });
-    const transformedData = await this.allotData(idData);
+  async writeToNodes(data, allotData = true) {
+    let transformedData = data;
+
+    if (allotData) {
+      // add a _id field to each record if it doesn't exist
+      const idData = data.map((record) => {
+        if (!record._id) {
+          return { ...record, _id: uuidv4() };
+        }
+        return record;
+      });
+
+      transformedData = await this.allotData(idData);
+    }
 
     const writeDataToNode = async (node, index) => {
       try {
@@ -431,9 +437,10 @@ export class SecretVaultWrapper {
   /**
    * Reads data from all nodes with optional decryption of specified fields
    * @param {object} filter - Filter criteria for reading data
+   * @param {boolean} [unifyData=true] - Whether to unify the data after reading
    * @returns {Promise<array>} Array of decrypted records
    */
-  async readFromNodes(filter = {}) {
+  async readFromNodes(filter = {}, unifyData = true) {
     const payload = { schema: this.schemaId, filter };
 
     const readDataFromNode = async (node) => {
@@ -488,12 +495,17 @@ export class SecretVaultWrapper {
       return acc;
     }, []);
 
-    const recombinedRecords = await Promise.all(
-      recordGroups.map(async (record) => {
-        const recombined = await this.nilqlWrapper.unify(record.shares);
-        return recombined;
-      }),
-    );
+    let recombinedRecords = recordGroups;
+
+    if (unifyData) {
+      recombinedRecords = await Promise.all(
+        recordGroups.map(async (record) => {
+          const recombined = await this.nilqlWrapper.unify(record.shares);
+          return recombined;
+        }),
+      );
+    }
+
     return recombinedRecords;
   }
 
