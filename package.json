@@ -1,6 +1,6 @@
 {
   "name": "secretvaults",
-  "version": "0.0.0-alpha.3",
+  "version": "0.0.0-alpha.4",
   "description": "Wrappers for Nillion's Secret Vaults and nilQL",
   "main": "index.js",
   "type": "module",
@@ -17,7 +17,7 @@
   "author": "Steph",
   "license": "MIT",
   "dependencies": {
-    "@nillion/nilql": "^0.0.0-alpha.14",
+    "@nillion/nilql": "0.0.0-alpha.14",
     "did-jwt": "^8.0.6",
     "dotenv": "^16.4.7",
     "uuid": "^11.0.5"
