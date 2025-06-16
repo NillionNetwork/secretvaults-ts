@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import { ES256KSigner, createJWT } from "did-jwt";
 import { v4 as uuidv4 } from "uuid";
-import { KeyType, NilQLWrapper, OperationType } from "../nilQl/wrapper.js";
+import { KeyType, NilQLWrapper, OperationType } from "./nilql";
 
 /**
  * SecretVaultWrapper manages distributed data storage across multiple nodes.

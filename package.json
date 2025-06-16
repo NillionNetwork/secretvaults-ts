@@ -1,31 +1,49 @@
 {
-  "name": "secretvaults",
-  "version": "0.0.0-alpha.4",
-  "description": "Wrappers for Nillion's Secret Vaults and nilQL",
-  "main": "index.js",
+  "name": "@nillion/secretvault",
+  "version": "0.1.0-alpha.0",
+  "license": "MIT",
+  "description": "A client for interacting with nillion's nildb blind module",
   "type": "module",
   "scripts": {
     "install-hooks": "lefthook install",
-    "prepublishOnly": "tsc"
+    "attw": "attw --profile esm-only --pack .",
+    "build": "tsup",
+    "test": "vitest run"
   },
   "exports": {
     ".": {
-      "import": "./index.js"
-    }
+      "types": "./dist/lib.d.ts",
+      "import": "./dist/lib.js"
+    },
+    "./package.json": "./package.json"
   },
-  "files": ["index.js", "nilQl/wrapper.js", "SecretVault/wrapper.js", "types/"],
-  "author": "Steph",
-  "license": "MIT",
   "dependencies": {
     "@nillion/nilql": "0.0.0-alpha.14",
-    "did-jwt": "^8.0.6",
-    "dotenv": "^16.4.7",
-    "uuid": "^11.0.5"
+    "@nillion/nuc": "0.1.0-rc.7",
+    "did-jwt": "^8.0.17",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "typescript": "^5.8.2",
-    "@biomejs/biome": "1.9.4",
-    "lefthook": "^1.11.11"
-  }
+    "@arethetypeswrong/cli": "^0.18.2",
+    "@biomejs/biome": "2.0.0-beta.6",
+    "@types/node": "^24.0.3",
+    "dotenv": "^16.5.0",
+    "lefthook": "^1.11.14",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.3",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@commitlint/types": "^19.8.1",
+    "@faker-js/faker": "^9.8.0",
+    "@vitest/coverage-v8": "3.2.3"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ]
 }
