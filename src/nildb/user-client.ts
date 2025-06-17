@@ -27,9 +27,7 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Retrieves the authenticated user's profile information.
    */
-  getProfile(options: {
-    token: string;
-  }): Promise<ReadProfileResponse> {
+  getProfile(options: { token: string }): Promise<ReadProfileResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.me,
       token: options.token,

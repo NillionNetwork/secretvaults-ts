@@ -1,4 +1,3 @@
-import { StatusCodes } from "http-status-codes";
 import z from "zod";
 import { ApiSuccessResponse, Did } from "./common";
 
@@ -121,9 +120,7 @@ export type GrantAccessToDataRequest = z.infer<typeof GrantAccessToDataRequest>;
 /**
  * Grant data access response.
  */
-export const GrantAccessToDataResponse = new Response(null, {
-  status: StatusCodes.NO_CONTENT,
-});
+export const GrantAccessToDataResponse = z.void();
 export type GrantAccessToDataResponse = typeof GrantAccessToDataResponse;
 
 /**
@@ -141,9 +138,7 @@ export type RevokeAccessToDataRequest = z.infer<
 /**
  * Revoke data access response.
  */
-export const RevokeAccessToDataResponse = new Response(null, {
-  status: StatusCodes.NO_CONTENT,
-});
+export const RevokeAccessToDataResponse = z.void();
 export type RevokeAccessToDataResponse = typeof RevokeAccessToDataResponse;
 
 /**
@@ -160,6 +155,4 @@ export type DeleteDocumentRequestParams = z.infer<
 /**
  * Document deletion response.
  */
-export const DeleteDocumentResponse = new Response(null, {
-  status: StatusCodes.NO_CONTENT,
-});
+export const DeleteDocumentResponse = z.void();

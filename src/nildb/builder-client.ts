@@ -72,9 +72,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Retrieves the authenticated builder's profile information.
    */
-  getProfile(options: {
-    token: string;
-  }): Promise<ReadBuilderProfileResponse> {
+  getProfile(options: { token: string }): Promise<ReadBuilderProfileResponse> {
     return this.request({
       path: NilDbEndpoint.v1.builders.me,
       token: options.token,
@@ -101,9 +99,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Deletes the authenticated builder and all associated resources.
    */
-  deleteBuilder(options: {
-    token: string;
-  }): Promise<void> {
+  deleteBuilder(options: { token: string }): Promise<void> {
     return this.request({
       path: NilDbEndpoint.v1.builders.me,
       method: "DELETE",
@@ -150,7 +146,10 @@ export class NilDbBuilderClient extends NilDbBaseClient {
     token: string;
   }): Promise<void> {
     return this.request({
-      path: NilDbEndpoint.v1.collections.byId.replace(":id", options.collection),
+      path: NilDbEndpoint.v1.collections.byId.replace(
+        ":id",
+        options.collection,
+      ),
       method: "DELETE",
       token: options.token,
       responseSchema: z.void(),
@@ -165,7 +164,10 @@ export class NilDbBuilderClient extends NilDbBaseClient {
     token: string;
   }): Promise<ReadCollectionMetadataResponse> {
     return this.request({
-      path: NilDbEndpoint.v1.collections.byId.replace(":id", options.collection),
+      path: NilDbEndpoint.v1.collections.byId.replace(
+        ":id",
+        options.collection,
+      ),
       method: "GET",
       token: options.token,
       responseSchema: ReadCollectionMetadataResponse,
@@ -181,7 +183,10 @@ export class NilDbBuilderClient extends NilDbBaseClient {
     token: string;
   }): Promise<void> {
     return this.request({
-      path: NilDbEndpoint.v1.collections.indexesById.replace(":id", options.collection),
+      path: NilDbEndpoint.v1.collections.indexesById.replace(
+        ":id",
+        options.collection,
+      ),
       method: "POST",
       body: options.body,
       token: options.token,
@@ -210,9 +215,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Lists all queries owned by the authenticated builder.
    */
-  getQueries(options: {
-    token: string;
-  }): Promise<ReadQueriesResponse> {
+  getQueries(options: { token: string }): Promise<ReadQueriesResponse> {
     return this.request({
       path: NilDbEndpoint.v1.queries.root,
       token: options.token,
@@ -253,10 +256,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Deletes a query by id.
    */
-  deleteQuery(options: {
-    query: Uuid;
-    token: string;
-  }): Promise<void> {
+  deleteQuery(options: { query: Uuid; token: string }): Promise<void> {
     return this.request({
       path: NilDbEndpoint.v1.queries.byId.replace(":id", options.query),
       method: "DELETE",
@@ -378,10 +378,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Removes all data from a collection.
    */
-  flushData(options: {
-    collection: Uuid;
-    token: string;
-  }): Promise<void> {
+  flushData(options: { collection: Uuid; token: string }): Promise<void> {
     return this.request({
       path: NilDbEndpoint.v1.data.flushById.replace(":id", options.collection),
       method: "DELETE",

@@ -1,4 +1,3 @@
-import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
 import { ApiSuccessResponse, Did } from "./common";
 
@@ -59,9 +58,7 @@ export type DropCollectionIndexParams = z.infer<
 /**
  * Drop collection index response.
  */
-export const DropCollectionIndexResponse = new Response(null, {
-  status: StatusCodes.NO_CONTENT,
-});
+export const DropCollectionIndexResponse = z.void();
 
 /**
  * Collection creation request.
@@ -77,9 +74,7 @@ export type CreateCollectionRequest = z.infer<typeof CreateCollectionRequest>;
 /**
  * Collection creation response.
  */
-export const CreateCollectionResponse = new Response(null, {
-  status: StatusCodes.CREATED,
-});
+export const CreateCollectionResponse = z.void();
 
 /**
  * Collection deletion parameters.
@@ -94,9 +89,7 @@ export type DeleteCollectionRequestParams = z.infer<
 /**
  * Collection deletion response.
  */
-export const DeleteCollectionResponse = new Response(null, {
-  status: StatusCodes.NO_CONTENT,
-});
+export const DeleteCollectionResponse = z.void();
 
 /**
  * Collection metadata read parameters.
