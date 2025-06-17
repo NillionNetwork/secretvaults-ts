@@ -1,6 +1,10 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,14 +19,13 @@ jobs:
           submodules: 'recursive'
       - uses: actions/setup-node@v4
         with:
-          node-version: "23"
+          node-version: "24"
       - uses: pnpm/action-setup@v4
       - run: pnpm install
-      - run: pnpm build
       - run: pnpm exec biome ci
       - run: tsc
-      - run: pnpm attw
-
+      - run: pnpm build
+      - run: pnpm attw --pack
   test:
     needs: check
     runs-on: ubuntu-latest
