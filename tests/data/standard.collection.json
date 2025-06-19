@@ -1,0 +1,23 @@
+{
+  "_id": "",
+  "type": "standard",
+  "name": "standard.collection.json",
+  "schema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "array",
+    "uniqueItems": true,
+    "items": {
+      "type": "object",
+      "properties": {
+        "_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["_id", "name"]
+    }
+  }
+}

@@ -1,12 +1,23 @@
 pre-commit:
   commands:
     biome-format:
-      glob: "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,css,html}"
-      run: npx biome format --write --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {staged_files}
+      glob: "*.{ts,json,jsonc}"
+      run: pnpm exec biome format --write --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {staged_files}
       stage_fixed: true
+
+commit-msg:
+  commands:
+    lint-commit-msg:
+      run: pnpm commitlint --edit
 
 pre-push:
   commands:
     biome-check:
-      glob: "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc,css,html}"
-      run: npx biome check --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {push_files}
+      glob: "*.{ts,json,jsonc}"
+      run: pnpm biome check --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {push_files}
+    tsc-check:
+      glob: "*.{ts}"
+      run: pnpm exec tsc
+    test:
+      glob: "*.{ts}"
+      run: pnpm test
