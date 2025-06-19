@@ -4,6 +4,7 @@ import {
   Keypair,
   NucTokenBuilder,
   type NucTokenEnvelope,
+  NucTokenEnvelopeSchema,
 } from "@nillion/nuc";
 import type {
   CreateDataResponse,
@@ -83,10 +84,12 @@ export class SecretVaultUserClient {
 
   async createData(options: {
     body: CreateOwnedDataRequest;
-    delegation: NucTokenEnvelope;
+    delegation: string;
   }): Promise<ByNodeName<CreateDataResponse>> {
     return this.executeOnAllNodes(async (client) => {
-      const token = NucTokenBuilder.extending(options.delegation)
+      const envelope = NucTokenEnvelopeSchema.parse(options.delegation);
+
+      const token = NucTokenBuilder.extending(envelope)
         .body(new InvocationBody({}))
         .command(NucCmd.nil.db.data.create)
         .expiresAt(Date.now() + 60 * 1000)
