@@ -38,7 +38,7 @@ export async function setup(_project: TestProject) {
       process.exit(1);
     }
     // Sleep for 2s to ensure AboutResponse.started is at least 2s earlier than the tests start.
-    await new Promise((f) => setTimeout(f, 2000));
+    await new Promise((f) => setTimeout(f, 5000));
     console.log("✅ Containers started successfully.");
   } catch (error) {
     console.error("❌ Error starting containers: ", error);
