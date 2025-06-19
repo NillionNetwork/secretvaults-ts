@@ -44,26 +44,3 @@ export const Acl = z.object({
   execute: z.boolean(),
 });
 export type Acl = z.infer<typeof Acl>;
-
-/**
- *
- */
-export const AboutNode = z.object({
-  started: z.string().datetime(),
-  build: z.object({
-    time: z.string().datetime(),
-    commit: z.string(),
-    version: z.string(),
-  }),
-  public_key: z.string(),
-  url: z.string(),
-  maintenance: z.object({
-    active: z.boolean(),
-    started_at: z.string().datetime(),
-  }),
-});
-
-/**
- *
- */
-export type AboutNode = z.infer<typeof AboutNode>;

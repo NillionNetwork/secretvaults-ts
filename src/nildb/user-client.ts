@@ -1,5 +1,10 @@
 import z from "zod";
 import type { Uuid } from "#/common/types";
+import {
+  CreateDataResponse,
+  type CreateOwnedDataRequest,
+} from "#/nildb/dto/data.dto";
+import type { ReadAboutNodeResponse } from "#/nildb/dto/system.dto";
 import { NilDbBaseClient, NilDbBaseClientOptions } from "./base-client";
 import {
   type GrantAccessToDataRequest,
@@ -45,6 +50,22 @@ export class NilDbUserClient extends NilDbBaseClient {
       path: NilDbEndpoint.v1.users.data.root,
       token: options.token,
       responseSchema: ListDataReferencesResponse,
+    });
+  }
+
+  /**
+   * Create user-owned data in an owned collection
+   */
+  createOwnedData(options: {
+    token: string;
+    body: CreateOwnedDataRequest;
+  }): Promise<CreateDataResponse> {
+    return this.request({
+      path: NilDbEndpoint.v1.data.createOwned,
+      method: "POST",
+      token: options.token,
+      body: options.body,
+      responseSchema: CreateDataResponse,
     });
   }
 
@@ -117,8 +138,15 @@ export class NilDbUserClient extends NilDbBaseClient {
 }
 
 export async function createNilDbUserClient(
-  options: NilDbUserClientOptions,
+  baseUrl: string,
 ): Promise<NilDbUserClient> {
-  const validated = NilDbUserClientOptions.parse(options);
+  const response = await fetch(`${baseUrl}/about`);
+  const about = (await response.json()) as ReadAboutNodeResponse;
+
+  const validated = NilDbUserClientOptions.parse({
+    about,
+    baseUrl,
+  });
+
   return new NilDbUserClient(validated);
 }

@@ -1,3 +1,4 @@
+import { Did } from "@nillion/nuc";
 import z from "zod";
 import { log } from "#/common/logger";
 import {
@@ -7,6 +8,7 @@ import {
 import { NilDbEndpoint } from "./paths";
 
 export const NilDbBaseClientOptions = z.object({
+  about: ReadAboutNodeResponse,
   baseUrl: z.string().min(15),
 });
 
@@ -24,6 +26,14 @@ export class NilDbBaseClient {
 
   constructor(options: NilDbBaseClientOptions) {
     this.#options = options;
+  }
+
+  get name(): string {
+    return this.#options.about.public_key.slice(-4);
+  }
+
+  get did(): Did {
+    return Did.fromHex(this.#options.about.public_key);
   }
 
   /**
@@ -80,7 +90,7 @@ export class NilDbBaseClient {
 
     if (contentType.includes("application/json")) {
       const json = await response.json();
-      log("Response body: ", json);
+      console.log("Response body: ", json);
 
       if (!response.ok) {
         this.handleErrorResponse(response, method, path, json);

@@ -1,18 +1,16 @@
-import { z } from "zod/v4";
+import z from "zod";
+import type { ReadAboutNodeResponse } from "#/nildb/dto/system.dto";
+import type { ReadProfileResponse } from "#/nildb/dto/users.dto";
+
+export const DataConflictResolutionStrategy = z.enum(["random"]);
+export type DataConflictResolutionStrategy = z.infer<
+  typeof DataConflictResolutionStrategy
+>;
+
+export type ClusterNodesInfo = Record<string, ReadAboutNodeResponse>;
+export type ClusterUserProfiles = Record<string, ReadProfileResponse>;
 
 /**
  *
  */
-export const NilDbNodeOptions = z.url();
-
-/**
- *
- */
-export const SecretVaultOptions = z.object({
-  nodes: NilDbNodeOptions.array(),
-});
-
-/**
- *
- */
-export type SecretVaultOptions = z.infer<typeof SecretVaultOptions>;
+export type ByNodeName<T> = Record<string, T>;

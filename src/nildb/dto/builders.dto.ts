@@ -19,7 +19,7 @@ export type RegisterBuilderResponse = typeof RegisterBuilderResponse;
 /**
  * Builder profile data.
  */
-const ProfileDto = z.object({
+const BuilderProfileDto = z.object({
   _id: Did,
   _created: z.string().datetime(),
   _updated: z.string().datetime(),
@@ -31,7 +31,7 @@ const ProfileDto = z.object({
 /**
  * Profile retrieval response.
  */
-export const ReadBuilderProfileResponse = ApiSuccessResponse(ProfileDto);
+export const ReadBuilderProfileResponse = ApiSuccessResponse(BuilderProfileDto);
 export type ReadBuilderProfileResponse = z.infer<
   typeof ReadBuilderProfileResponse
 >;

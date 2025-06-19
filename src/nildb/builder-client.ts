@@ -13,6 +13,7 @@ import {
   type UpdateDataRequest,
   UpdateDataResponse,
 } from "#/nildb/dto/data.dto";
+import type { ReadAboutNodeResponse } from "#/nildb/dto/system.dto";
 import { NilDbEndpoint } from "#/nildb/paths";
 import {
   ReadBuilderProfileResponse,
@@ -56,16 +57,13 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Registers a new builder.
    */
-  register(options: {
-    body: RegisterBuilderRequest;
-    token: string;
-  }): Promise<void> {
-    return this.request({
+  async register(options: { body: RegisterBuilderRequest }): Promise<void> {
+    const _result = await this.request({
       path: NilDbEndpoint.v1.builders.register,
       method: "POST",
       body: options.body,
-      token: options.token,
-      responseSchema: z.void(),
+      // hono sets content-type: text/plain on empty responses
+      responseSchema: z.string(),
     });
   }
 
@@ -111,16 +109,17 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Creates a new collection for data validation.
    */
-  createCollection(options: {
+  async createCollection(options: {
     body: CreateCollectionRequest;
     token: string;
   }): Promise<void> {
-    return this.request({
+    const _result = this.request({
       path: NilDbEndpoint.v1.collections.root,
       method: "POST",
       body: options.body,
       token: options.token,
-      responseSchema: z.void(),
+      // hono sets content-type: text/plain on empty responses
+      responseSchema: z.string(),
     });
   }
 
@@ -406,8 +405,15 @@ export class NilDbBuilderClient extends NilDbBaseClient {
 }
 
 export async function createNilDbBuilderClient(
-  options: NilDbBuilderClientOptions,
+  baseUrl: string,
 ): Promise<NilDbBuilderClient> {
-  const validated = NilDbBuilderClientOptions.parse(options);
+  const response = await fetch(`${baseUrl}/about`);
+  const body = (await response.json()) as ReadAboutNodeResponse;
+
+  const validated = NilDbBuilderClientOptions.parse({
+    about: body,
+    baseUrl: baseUrl,
+  });
+
   return new NilDbBuilderClient(validated);
 }
