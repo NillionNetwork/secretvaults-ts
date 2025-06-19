@@ -1,6 +1,6 @@
 {
   "name": "@nillion/secretvault",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "license": "MIT",
   "description": "A client for interacting with nillion's nildb blind module",
   "type": "module",
@@ -22,7 +22,7 @@
     "@nillion/nuc": "0.1.0-rc.8",
     "debug": "^4.4.1",
     "uuid": "^11.1.0",
-    "zod": "^3.25.64"
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
@@ -34,7 +34,7 @@
     "@types/debug": "^4.1.12",
     "@types/node": "^24.0.3",
     "@types/semver": "^7.7.0",
-    "@vitest/coverage-v8": "3.2.3",
+    "@vitest/coverage-v8": "3.2.4",
     "docker-compose": "^1.2.0",
     "dotenv": "^16.5.0",
     "lefthook": "^1.11.14",
@@ -48,7 +48,7 @@
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.3"
+    "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@10.11.0",
   "files": [
