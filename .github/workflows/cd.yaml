@@ -24,7 +24,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - run: pnpm install
       - id: check-version
-        run: tsx bin/should-publish.ts
+        run: pnpm exec tsx bin/check-version.ts
 
   publish:
     needs: check-version
