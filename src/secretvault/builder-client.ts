@@ -130,7 +130,9 @@ export class SecretVaultBuilderClient {
     });
   }
 
-  async createCollection(body: CreateCollectionRequest): Promise<ByNodeName<void>> {
+  async createCollection(
+    body: CreateCollectionRequest,
+  ): Promise<ByNodeName<void>> {
     return this.executeOnAllNodes(async (client) => {
       const token = NucTokenBuilder.extending(this.rootToken)
         .command(NucCmd.nil.db.collections.create)

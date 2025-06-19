@@ -51,7 +51,7 @@ describe("owned-data.test.ts", () => {
     const delegation = NucTokenBuilder.extending(builder.rootToken)
       .command(NucCmd.nil.db.data.create)
       .audience(user.did)
-      .expiresAt(Date.now() + 1000 * 60)
+      .expiresAt((Date.now() + 1000 * 60) / 1000)
       .build(builder._options.keypair.privateKey());
 
     const result = await user.createData({

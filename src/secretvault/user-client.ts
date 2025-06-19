@@ -3,7 +3,6 @@ import {
   InvocationBody,
   Keypair,
   NucTokenBuilder,
-  type NucTokenEnvelope,
   NucTokenEnvelopeSchema,
 } from "@nillion/nuc";
 import type {
