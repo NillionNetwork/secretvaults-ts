@@ -57,16 +57,16 @@ export class SecretVaultUserClient {
         audience: client.did,
       });
 
-      return client.getProfile({ token });
+      return client.getProfile(token);
     });
   }
 
-  createData(options: {
-    body: CreateOwnedDataRequest;
-    delegation: string;
-  }): Promise<ByNodeName<CreateDataResponse>> {
+  createData(
+    body: CreateOwnedDataRequest,
+    delegation: string,
+  ): Promise<ByNodeName<CreateDataResponse>> {
     return this.executeOnAllNodes(async (client) => {
-      const envelop = NucTokenEnvelopeSchema.parse(options.delegation);
+      const envelop = NucTokenEnvelopeSchema.parse(delegation);
       const token = NucTokenBuilder.extending(envelop)
         .audience(client.did)
         .command(NucCmd.nil.db.data.create)
@@ -74,7 +74,7 @@ export class SecretVaultUserClient {
         .body(new InvocationBody({}))
         .build(this.keypair.privateKey());
 
-      return client.createOwnedData({ body: options.body, token });
+      return client.createOwnedData(token, body);
     });
   }
 
@@ -85,7 +85,7 @@ export class SecretVaultUserClient {
         audience: client.did,
       });
 
-      return client.listDataReferences({ token });
+      return client.listDataReferences(token);
     });
   }
 
@@ -98,7 +98,7 @@ export class SecretVaultUserClient {
         audience: client.did,
       });
 
-      return client.readData(params, token);
+      return client.readData(token, params);
     });
   }
 

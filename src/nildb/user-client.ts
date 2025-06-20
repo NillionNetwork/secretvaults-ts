@@ -1,12 +1,12 @@
 import z from "zod";
 import { NilDbEndpoint } from "#/common/paths";
-import type { Uuid } from "#/common/types";
 import {
   CreateDataResponse,
   type CreateOwnedDataRequest,
 } from "#/dto/data.dto";
 import type { ReadAboutNodeResponse } from "#/dto/system.dto";
 import {
+  type DeleteDocumentRequestParams,
   type GrantAccessToDataRequest,
   ListDataReferencesResponse,
   type ReadDataRequestParams,
@@ -33,10 +33,10 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Retrieves the authenticated user's profile information.
    */
-  getProfile(options: { token: string }): Promise<ReadUserProfileResponse> {
+  getProfile(token: string): Promise<ReadUserProfileResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.me,
-      token: options.token,
+      token,
       responseSchema: ReadUserProfileResponse,
     });
   }
@@ -44,12 +44,10 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Lists all data records owned by the authenticated user.
    */
-  listDataReferences(options: {
-    token: string;
-  }): Promise<ListDataReferencesResponse> {
+  listDataReferences(token: string): Promise<ListDataReferencesResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.root,
-      token: options.token,
+      token,
       responseSchema: ListDataReferencesResponse,
     });
   }
@@ -57,15 +55,15 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Create user-owned data in an owned collection
    */
-  createOwnedData(options: {
-    token: string;
-    body: CreateOwnedDataRequest;
-  }): Promise<CreateDataResponse> {
+  createOwnedData(
+    token: string,
+    body: CreateOwnedDataRequest,
+  ): Promise<CreateDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.data.createOwned,
       method: "POST",
-      token: options.token,
-      body: options.body,
+      token,
+      body,
       responseSchema: CreateDataResponse,
     });
   }
@@ -74,8 +72,8 @@ export class NilDbUserClient extends NilDbBaseClient {
    * Retrieves user-owned data by collection and document id.
    */
   readData(
-    params: ReadDataRequestParams,
     token: string,
+    params: ReadDataRequestParams,
   ): Promise<ReadDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.byId
@@ -89,17 +87,16 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Deletes a user-owned data document.
    */
-  deleteData(options: {
-    token: string;
-    collection: Uuid;
-    document: Uuid;
-  }): Promise<void> {
+  deleteData(
+    token: string,
+    params: DeleteDocumentRequestParams,
+  ): Promise<void> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.byId
-        .replace(":collection", options.collection)
-        .replace(":document", options.document),
+        .replace(":collection", params.collection)
+        .replace(":document", params.document),
       method: "DELETE",
-      token: options.token,
+      token,
       responseSchema: z.void(),
     });
   }
@@ -107,15 +104,12 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Grants access to user-owned data.
    */
-  grantAccess(options: {
-    token: string;
-    body: GrantAccessToDataRequest;
-  }): Promise<void> {
+  grantAccess(token: string, body: GrantAccessToDataRequest): Promise<void> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.acl.grant,
       method: "POST",
-      body: options.body,
-      token: options.token,
+      body,
+      token,
       responseSchema: z.void(),
     });
   }
@@ -123,15 +117,12 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Removes access to user-owned data.
    */
-  revokeAccess(options: {
-    token: string;
-    body: RevokeAccessToDataRequest;
-  }): Promise<void> {
+  revokeAccess(token: string, body: RevokeAccessToDataRequest): Promise<void> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.acl.revoke,
       method: "POST",
-      body: options.body,
-      token: options.token,
+      body,
+      token,
       responseSchema: z.void(),
     });
   }
