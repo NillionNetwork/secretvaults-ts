@@ -87,43 +87,49 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Deletes a user-owned data document.
    */
-  deleteData(
+  async deleteData(
     token: string,
     params: DeleteDocumentRequestParams,
   ): Promise<void> {
-    return this.request({
+    await this.request({
       path: NilDbEndpoint.v1.users.data.byId
         .replace(":collection", params.collection)
         .replace(":document", params.document),
       method: "DELETE",
       token,
-      responseSchema: z.void(),
+      responseSchema: z.string(),
     });
   }
 
   /**
    * Grants access to user-owned data.
    */
-  grantAccess(token: string, body: GrantAccessToDataRequest): Promise<void> {
-    return this.request({
+  async grantAccess(
+    token: string,
+    body: GrantAccessToDataRequest,
+  ): Promise<void> {
+    const _result = await this.request({
       path: NilDbEndpoint.v1.users.data.acl.grant,
       method: "POST",
       body,
       token,
-      responseSchema: z.void(),
+      responseSchema: z.string(),
     });
   }
 
   /**
    * Removes access to user-owned data.
    */
-  revokeAccess(token: string, body: RevokeAccessToDataRequest): Promise<void> {
-    return this.request({
+  async revokeAccess(
+    token: string,
+    body: RevokeAccessToDataRequest,
+  ): Promise<void> {
+    const _result = await this.request({
       path: NilDbEndpoint.v1.users.data.acl.revoke,
       method: "POST",
       body,
       token,
-      responseSchema: z.void(),
+      responseSchema: z.string(),
     });
   }
 }
