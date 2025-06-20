@@ -101,7 +101,6 @@ describe("owned-data.test.ts", () => {
     const { user, expect } = c;
 
     const results = await user.listDataReferences();
-
     const node153c = results["153c"].data!;
     const node2340 = results["2340"].data!;
     expect(node153c).toEqual(node2340);

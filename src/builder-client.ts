@@ -360,7 +360,7 @@ export class SecretVaultBuilderClient {
   }
 
   readQueryRunResults(
-    run: Uuid,
+    runs: ByNodeName<Uuid>,
   ): Promise<ByNodeName<ReadQueryRunByIdResponse>> {
     return this.executeOnAllNodes(async (client) => {
       const token = NucTokenBuilder.extending(this.rootToken)
@@ -370,6 +370,7 @@ export class SecretVaultBuilderClient {
         .audience(client.did)
         .build(this._options.keypair.privateKey());
 
+      const run = runs[client.name];
       return client.readQueryRunResults(token, run);
     });
   }
