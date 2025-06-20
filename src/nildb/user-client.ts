@@ -1,19 +1,20 @@
 import z from "zod";
-import type { Uuid } from "#/common/types";
+import { NilDbEndpoint } from "#/common/paths";
 import {
   CreateDataResponse,
   type CreateOwnedDataRequest,
-} from "#/nildb/dto/data.dto";
-import type { ReadAboutNodeResponse } from "#/nildb/dto/system.dto";
-import { NilDbBaseClient, NilDbBaseClientOptions } from "./base-client";
+} from "#/dto/data.dto";
+import type { ReadAboutNodeResponse } from "#/dto/system.dto";
 import {
+  type DeleteDocumentRequestParams,
   type GrantAccessToDataRequest,
   ListDataReferencesResponse,
+  type ReadDataRequestParams,
   ReadDataResponse,
-  ReadProfileResponse,
+  ReadUserProfileResponse,
   type RevokeAccessToDataRequest,
-} from "./dto/users.dto";
-import { NilDbEndpoint } from "./paths";
+} from "#/dto/users.dto";
+import { NilDbBaseClient, NilDbBaseClientOptions } from "./base-client";
 
 export const NilDbUserClientOptions = z.object({
   ...NilDbBaseClientOptions.shape,
@@ -32,23 +33,21 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Retrieves the authenticated user's profile information.
    */
-  getProfile(options: { token: string }): Promise<ReadProfileResponse> {
+  getProfile(token: string): Promise<ReadUserProfileResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.me,
-      token: options.token,
-      responseSchema: ReadProfileResponse,
+      token,
+      responseSchema: ReadUserProfileResponse,
     });
   }
 
   /**
    * Lists all data records owned by the authenticated user.
    */
-  listDataReferences(options: {
-    token: string;
-  }): Promise<ListDataReferencesResponse> {
+  listDataReferences(token: string): Promise<ListDataReferencesResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.root,
-      token: options.token,
+      token,
       responseSchema: ListDataReferencesResponse,
     });
   }
@@ -56,15 +55,15 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Create user-owned data in an owned collection
    */
-  createOwnedData(options: {
-    token: string;
-    body: CreateOwnedDataRequest;
-  }): Promise<CreateDataResponse> {
+  createOwnedData(
+    token: string,
+    body: CreateOwnedDataRequest,
+  ): Promise<CreateDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.data.createOwned,
       method: "POST",
-      token: options.token,
-      body: options.body,
+      token,
+      body,
       responseSchema: CreateDataResponse,
     });
   }
@@ -72,16 +71,15 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Retrieves user-owned data by collection and document id.
    */
-  readData(options: {
-    token: string;
-    collection: Uuid;
-    document: Uuid;
-  }): Promise<ReadDataResponse> {
+  readData(
+    token: string,
+    params: ReadDataRequestParams,
+  ): Promise<ReadDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.byId
-        .replace(":collection", options.collection)
-        .replace(":document", options.document),
-      token: options.token,
+        .replace(":collection", params.collection)
+        .replace(":document", params.document),
+      token,
       responseSchema: ReadDataResponse,
     });
   }
@@ -89,50 +87,49 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Deletes a user-owned data document.
    */
-  deleteData(options: {
-    token: string;
-    collection: Uuid;
-    document: Uuid;
-  }): Promise<void> {
-    return this.request({
+  async deleteData(
+    token: string,
+    params: DeleteDocumentRequestParams,
+  ): Promise<void> {
+    await this.request({
       path: NilDbEndpoint.v1.users.data.byId
-        .replace(":collection", options.collection)
-        .replace(":document", options.document),
+        .replace(":collection", params.collection)
+        .replace(":document", params.document),
       method: "DELETE",
-      token: options.token,
-      responseSchema: z.void(),
+      token,
+      responseSchema: z.string(),
     });
   }
 
   /**
    * Grants access to user-owned data.
    */
-  grantAccess(options: {
-    token: string;
-    body: GrantAccessToDataRequest;
-  }): Promise<void> {
-    return this.request({
+  async grantAccess(
+    token: string,
+    body: GrantAccessToDataRequest,
+  ): Promise<void> {
+    const _result = await this.request({
       path: NilDbEndpoint.v1.users.data.acl.grant,
       method: "POST",
-      body: options.body,
-      token: options.token,
-      responseSchema: z.void(),
+      body,
+      token,
+      responseSchema: z.string(),
     });
   }
 
   /**
    * Removes access to user-owned data.
    */
-  revokeAccess(options: {
-    token: string;
-    body: RevokeAccessToDataRequest;
-  }): Promise<void> {
-    return this.request({
+  async revokeAccess(
+    token: string,
+    body: RevokeAccessToDataRequest,
+  ): Promise<void> {
+    const _result = await this.request({
       path: NilDbEndpoint.v1.users.data.acl.revoke,
       method: "POST",
-      body: options.body,
-      token: options.token,
-      responseSchema: z.void(),
+      body,
+      token,
+      responseSchema: z.string(),
     });
   }
 }

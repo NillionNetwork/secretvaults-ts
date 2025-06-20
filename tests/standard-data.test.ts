@@ -2,7 +2,7 @@ import * as crypto from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
 import type { Uuid } from "#/common/types";
-import type { CreateCollectionRequest } from "#/nildb/dto/collections.dto";
+import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import collection from "./data/standard.collection.json";
 import query from "./data/standard.query.json";
 import { createFixture } from "./fixture/fixture";

@@ -46,8 +46,8 @@ const UserProfileData = z.object({
 /**
  * User profile response.
  */
-export const ReadProfileResponse = ApiSuccessResponse(UserProfileData);
-export type ReadProfileResponse = z.infer<typeof ReadProfileResponse>;
+export const ReadUserProfileResponse = ApiSuccessResponse(UserProfileData);
+export type ReadUserProfileResponse = z.infer<typeof ReadUserProfileResponse>;
 
 /**
  * Data read request parameters.
@@ -69,7 +69,7 @@ const OwnedDataDto = z
   // Allow all keys through since each collection will follow a different schema
   .passthrough();
 
-export const ReadDataResponse = ApiSuccessResponse(z.array(OwnedDataDto));
+export const ReadDataResponse = ApiSuccessResponse(OwnedDataDto);
 export type ReadDataResponse = z.infer<typeof ReadDataResponse>;
 
 /**

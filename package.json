@@ -1,6 +1,6 @@
 {
   "name": "@nillion/secretvault",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "license": "MIT",
   "description": "A client for interacting with nillion's nildb blind module",
   "type": "module",
@@ -50,7 +50,7 @@
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"
   },
-  "packageManager": "pnpm@10.11.0",
+  "packageManager": "pnpm@10.12.1",
   "files": [
     "dist",
     "LICENSE",

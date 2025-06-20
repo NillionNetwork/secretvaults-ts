@@ -2,41 +2,29 @@ import {
   type Did,
   InvocationBody,
   type Keypair,
-  NilauthClient,
+  type NilauthClient,
   NucTokenBuilder,
   type NucTokenEnvelope,
-  PayerBuilder,
   type SubscriptionStatusResponse,
 } from "@nillion/nuc";
-import {
-  createNilDbBuilderClient,
-  type NilDbBuilderClient,
-} from "#/nildb/builder-client";
+import { NucCmd } from "./common/nuc-cmd";
+import type { ByNodeName } from "./common/types";
 import type {
   ReadBuilderProfileResponse,
   RegisterBuilderRequest,
-} from "#/nildb/dto/builders.dto";
-import type { CreateCollectionRequest } from "#/nildb/dto/collections.dto";
+} from "./dto/builders.dto";
+import type { CreateCollectionRequest } from "./dto/collections.dto";
 import type {
   CreateDataResponse,
   CreateStandardDataRequest,
-} from "#/nildb/dto/data.dto";
-import type { ReadAboutNodeResponse } from "#/nildb/dto/system.dto";
-import { NucCmd } from "#/nildb/nuc-cmd";
-import type {
-  ByNodeName,
-  DataConflictResolutionStrategy,
-} from "#/secretvault/types";
+} from "./dto/data.dto";
+import type { ReadAboutNodeResponse } from "./dto/system.dto";
+import type { NilDbBuilderClient } from "./nildb/builder-client";
 
 /**
  *
  */
 export type SecretVaultBuilderOptions = {
-  dataConflictResolutionStrategy:
-    | "random"
-    | "last-updated"
-    | "first-response"
-    | "priority-order";
   nilauthClient: NilauthClient;
   clients: NilDbBuilderClient[];
   keypair: Keypair;
@@ -168,34 +156,4 @@ export class SecretVaultBuilderClient {
       });
     });
   }
-}
-
-export async function createSecretVaultBuilderClient(options: {
-  keypair: Keypair;
-  urls: {
-    chain: string;
-    auth: string;
-    dbs: string[];
-  };
-  dataConflictResolutionStrategy: DataConflictResolutionStrategy;
-}): Promise<SecretVaultBuilderClient> {
-  const { urls, keypair, dataConflictResolutionStrategy } = options;
-
-  // This is not used for subscription payments; its is created here because NilauthClient
-  // requires a payer
-  const payerBuilder = await new PayerBuilder()
-    .keypair(keypair)
-    .chainUrl(urls.chain)
-    .build();
-  const nilauthClient = await NilauthClient.from(urls.auth, payerBuilder);
-
-  const clientPromises = urls.dbs.map((base) => createNilDbBuilderClient(base));
-  const clients = await Promise.all(clientPromises);
-
-  return new SecretVaultBuilderClient({
-    dataConflictResolutionStrategy,
-    clients,
-    nilauthClient,
-    keypair,
-  });
 }

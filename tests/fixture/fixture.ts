@@ -1,19 +1,18 @@
-import { Keypair, NilauthClient, type Payer, PayerBuilder } from "@nillion/nuc";
+import { Keypair, NilauthClient, PayerBuilder } from "@nillion/nuc";
 import { MongoClient } from "mongodb";
 import type { Logger } from "pino";
-import type { JsonObject } from "type-fest";
 import * as vitest from "vitest";
-import type { Uuid } from "#/common/types";
+import type { SecretVaultBuilderClient } from "#/builder-client";
 import {
   createSecretVaultBuilderClient,
-  type SecretVaultBuilderClient,
-} from "#/secretvault/builder-client";
-import {
   createSecretVaultUserClient,
-  type SecretVaultUserClient,
-} from "#/secretvault/user-client";
+} from "#/factory";
+import type { SecretVaultUserClient } from "#/user-client";
 import { createTestLogger } from "./utils";
 
+/**
+ *
+ */
 export type FixtureContext = {
   env: {
     urls: {
@@ -23,32 +22,18 @@ export type FixtureContext = {
     };
   };
   log: Logger;
-  payer: Payer;
+  payer: {
+    nilauth: NilauthClient;
+  };
   builder: SecretVaultBuilderClient;
   user: SecretVaultUserClient;
   expect: vitest.ExpectStatic;
   db: MongoClient;
 };
 
-export type CollectionFixture = {
-  _d: Uuid;
-  type: "owned" | "standard";
-  name: string;
-  keys: string[];
-  schema: JsonObject;
-};
-
-export type QueryFixture = {
-  _id: Uuid;
-  name: string;
-  collection: Uuid;
-  variables: Record<
-    string,
-    { path: string; description?: string; optional?: boolean }
-  >;
-  pipeline: JsonObject[];
-};
-
+/**
+ *
+ */
 type TestFixtureExtension = {
   it: vitest.TestAPI<{ c: FixtureContext }>;
   test: vitest.TestAPI<{ c: FixtureContext }>;
@@ -56,11 +41,17 @@ type TestFixtureExtension = {
   afterAll: (fn: (c: FixtureContext) => Promise<void>) => void;
 };
 
+/**
+ *
+ */
 type CreateFixtureOptions = {
   activateBuilderSubscription: boolean;
   keepDbs: boolean;
 };
 
+/**
+ *
+ */
 export function createFixture(
   options: CreateFixtureOptions = {
     activateBuilderSubscription: true,
@@ -146,6 +137,9 @@ export function createFixture(
   return { beforeAll, afterAll, it, test: it };
 }
 
+/**
+ *
+ */
 async function buildContext(
   options: CreateFixtureOptions,
 ): Promise<FixtureContext> {
@@ -161,8 +155,7 @@ async function buildContext(
   // create the secret vault user client
   const user = await createSecretVaultUserClient({
     baseUrls: nildbNodesUrls,
-    secretKey: Keypair.generate().privateKey("hex"),
-    dataConflictResolutionStrategy: "random",
+    keypair: Keypair.generate(),
   });
 
   const builder = await createSecretVaultBuilderClient({
@@ -172,24 +165,19 @@ async function buildContext(
       auth: nilauthUrl,
       dbs: nildbNodesUrls,
     },
-    dataConflictResolutionStrategy: "random",
   });
 
   const payer = await new PayerBuilder()
     .keypair(Keypair.from(secretKey))
     .chainUrl(nilchainUrl)
     .build();
+  const nilauth = await NilauthClient.from(nilauthUrl, payer);
 
   if (options.activateBuilderSubscription) {
     const publicKey = builder.keypair.publicKey("hex");
-    const response = await builder.subscriptionStatus();
-
-    if (!response.subscribed) {
-      log.info({ publicKey }, "Renewing subscription");
-      const nilauth = await NilauthClient.from(nilauthUrl, payer);
-      await nilauth.payAndValidate(publicKey, "nildb");
-      await builder.refreshRootToken();
-    }
+    log.info({ publicKey }, "Renewing subscription");
+    await nilauth.payAndValidate(publicKey, "nildb");
+    await builder.refreshRootToken();
   }
 
   return {
@@ -201,7 +189,9 @@ async function buildContext(
       },
     },
     log,
-    payer,
+    payer: {
+      nilauth,
+    },
     builder,
     user,
     db,
