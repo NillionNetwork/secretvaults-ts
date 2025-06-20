@@ -164,6 +164,22 @@ describe("owned-data.test.ts", () => {
     expect(otherBuilderAcl2340!.execute).toBe(false);
   });
 
+  // test("other builder can access user data with delegation", async ({ c }) => {
+  //   const { builder, user, expect } = c;
+  //
+  //   const delegation = NucTokenBuilder.extending(builder.rootToken)
+  //     .command(NucCmd.nil.db.data.read)
+  //     .audience(otherBuilder.did)
+  //     .expiresAt(intoSecondsFromNow(60))
+  //     .build(builder.keypair.privateKey());
+  //
+  //   const delegationEnvelope = NucTokenEnvelopeSchema.parse(delegation);
+
+  // const invocation = NucTokenBuilder
+  //   .invocation(delegationEnvelope)
+  //   .build(otherBuilder);
+  // });
+
   test("user can revoke access to their data", async ({ c }) => {
     const { user, expect } = c;
 

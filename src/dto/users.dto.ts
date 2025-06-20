@@ -2,14 +2,6 @@ import z from "zod";
 import { ApiSuccessResponse, Did } from "./common";
 
 /**
- * Generic ID path parameter.
- */
-export const ByIdRequestParams = z.object({
-  id: z.string().uuid(),
-});
-export type ByIdRequestParams = z.infer<typeof ByIdRequestParams>;
-
-/**
  * Access control list entry.
  */
 export const AclDto = z.object({
@@ -120,8 +112,10 @@ export type GrantAccessToDataRequest = z.infer<typeof GrantAccessToDataRequest>;
 /**
  * Grant data access response.
  */
-export const GrantAccessToDataResponse = z.void();
-export type GrantAccessToDataResponse = typeof GrantAccessToDataResponse;
+export const GrantAccessToDataResponse = z.string();
+export type GrantAccessToDataResponse = z.infer<
+  typeof GrantAccessToDataResponse
+>;
 
 /**
  * Revoke data access request.
@@ -138,8 +132,10 @@ export type RevokeAccessToDataRequest = z.infer<
 /**
  * Revoke data access response.
  */
-export const RevokeAccessToDataResponse = z.void();
-export type RevokeAccessToDataResponse = typeof RevokeAccessToDataResponse;
+export const RevokeAccessToDataResponse = z.string();
+export type RevokeAccessToDataResponse = z.infer<
+  typeof RevokeAccessToDataResponse
+>;
 
 /**
  * Document deletion parameters.
@@ -155,4 +151,15 @@ export type DeleteDocumentRequestParams = z.infer<
 /**
  * Document deletion response.
  */
-export const DeleteDocumentResponse = z.void();
+export const DeleteDocumentResponse = z.string();
+export type DeleteDocumentResponse = z.infer<typeof DeleteDocumentResponse>;
+
+/**
+ * Update user data request.
+ */
+export const UpdateUserDataRequest = z.object({
+  document: z.string().uuid(),
+  collection: z.string().uuid(),
+  update: z.record(z.string(), z.unknown()),
+});
+export type UpdateUserDataRequest = z.infer<typeof UpdateUserDataRequest>;
