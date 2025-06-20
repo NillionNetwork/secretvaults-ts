@@ -2,31 +2,40 @@ import z from "zod";
 import { NilDbEndpoint } from "#/common/paths";
 import type { Uuid } from "#/common/types";
 import {
+  DeleteBuilderResponse,
   ReadBuilderProfileResponse,
   type RegisterBuilderRequest,
+  RegisterBuilderResponse,
   type UpdateBuilderProfileRequest,
+  UpdateBuilderProfileResponse,
 } from "#/dto/builders.dto";
 import {
   type CreateCollectionIndexRequest,
+  CreateCollectionIndexResponse,
   type CreateCollectionRequest,
+  CreateCollectionResponse,
+  DeleteCollectionResponse,
+  DropCollectionIndexResponse,
   ListCollectionsResponse,
   ReadCollectionMetadataResponse,
 } from "#/dto/collections.dto";
 import type { Name } from "#/dto/common";
 import {
   CreateDataResponse,
-  type CreateOwnedDataRequest,
   type CreateStandardDataRequest,
   type DeleteDataRequest,
   DeleteDataResponse,
   type FindDataRequest,
   FindDataResponse,
+  FlushDataResponse,
   TailDataResponse,
   type UpdateDataRequest,
   UpdateDataResponse,
 } from "#/dto/data.dto";
 import {
   type CreateQueryRequest,
+  CreateQueryResponse,
+  DeleteQueryResponse,
   ReadQueriesResponse,
   ReadQueryResponse,
   ReadQueryRunByIdResponse,
@@ -57,23 +66,22 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Registers a new builder.
    */
-  async register(options: { body: RegisterBuilderRequest }): Promise<void> {
-    const _result = await this.request({
+  register(body: RegisterBuilderRequest): Promise<RegisterBuilderResponse> {
+    return this.request({
       path: NilDbEndpoint.v1.builders.register,
       method: "POST",
-      body: options.body,
-      // hono sets content-type: text/plain on empty responses
-      responseSchema: z.string(),
+      body,
+      responseSchema: RegisterBuilderResponse,
     });
   }
 
   /**
    * Retrieves the authenticated builder's profile information.
    */
-  getProfile(options: { token: string }): Promise<ReadBuilderProfileResponse> {
+  getProfile(token: string): Promise<ReadBuilderProfileResponse> {
     return this.request({
       path: NilDbEndpoint.v1.builders.me,
-      token: options.token,
+      token,
       responseSchema: ReadBuilderProfileResponse,
     });
   }
@@ -81,58 +89,55 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Updates the authenticated builder's profile information.
    */
-  updateProfile(options: {
-    body: UpdateBuilderProfileRequest;
-    token: string;
-  }): Promise<void> {
+  updateProfile(
+    token: string,
+    body: UpdateBuilderProfileRequest,
+  ): Promise<UpdateBuilderProfileResponse> {
     return this.request({
       path: NilDbEndpoint.v1.builders.me,
       method: "POST",
-      body: options.body,
-      token: options.token,
-      responseSchema: z.void(),
+      body,
+      token,
+      responseSchema: UpdateBuilderProfileResponse,
     });
   }
 
   /**
    * Deletes the authenticated builder and all associated resources.
    */
-  deleteBuilder(options: { token: string }): Promise<void> {
+  deleteBuilder(token: string): Promise<DeleteBuilderResponse> {
     return this.request({
       path: NilDbEndpoint.v1.builders.me,
       method: "DELETE",
-      token: options.token,
-      responseSchema: z.void(),
+      token,
+      responseSchema: DeleteBuilderResponse,
     });
   }
 
   /**
    * Creates a new collection for data validation.
    */
-  async createCollection(options: {
-    body: CreateCollectionRequest;
-    token: string;
-  }): Promise<void> {
-    const _result = this.request({
+  createCollection(
+    token: string,
+    body: CreateCollectionRequest,
+  ): Promise<CreateCollectionResponse> {
+    return this.request({
       path: NilDbEndpoint.v1.collections.root,
       method: "POST",
-      body: options.body,
-      token: options.token,
-      // hono sets content-type: text/plain on empty responses
-      responseSchema: z.string(),
+      body,
+      token,
+      responseSchema: CreateCollectionResponse,
     });
   }
 
   /**
    * Lists all collections owned by the authenticated builder.
    */
-  readCollections(options: {
-    token: string;
-  }): Promise<ListCollectionsResponse> {
+  readCollections(token: string): Promise<ListCollectionsResponse> {
     return this.request({
       path: NilDbEndpoint.v1.collections.root,
       method: "GET",
-      token: options.token,
+      token,
       responseSchema: ListCollectionsResponse,
     });
   }
@@ -140,35 +145,29 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Deletes a collection by id and all associated data.
    */
-  deleteCollection(options: {
-    collection: Uuid;
-    token: string;
-  }): Promise<void> {
+  deleteCollection(
+    token: string,
+    collection: Uuid,
+  ): Promise<DeleteCollectionResponse> {
     return this.request({
-      path: NilDbEndpoint.v1.collections.byId.replace(
-        ":id",
-        options.collection,
-      ),
+      path: NilDbEndpoint.v1.collections.byId.replace(":id", collection),
       method: "DELETE",
-      token: options.token,
-      responseSchema: z.void(),
+      token,
+      responseSchema: DeleteCollectionResponse,
     });
   }
 
   /**
    * Retrieves a collection by id including metadata.
    */
-  readCollection(options: {
-    collection: Uuid;
-    token: string;
-  }): Promise<ReadCollectionMetadataResponse> {
+  readCollection(
+    token: string,
+    collection: Uuid,
+  ): Promise<ReadCollectionMetadataResponse> {
     return this.request({
-      path: NilDbEndpoint.v1.collections.byId.replace(
-        ":id",
-        options.collection,
-      ),
+      path: NilDbEndpoint.v1.collections.byId.replace(":id", collection),
       method: "GET",
-      token: options.token,
+      token,
       responseSchema: ReadCollectionMetadataResponse,
     });
   }
@@ -176,48 +175,45 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Creates an index on a collection.
    */
-  createCollectionIndex(options: {
-    collection: Uuid;
-    body: CreateCollectionIndexRequest;
-    token: string;
-  }): Promise<void> {
+  createCollectionIndex(
+    token: string,
+    collection: Uuid,
+    body: CreateCollectionIndexRequest,
+  ): Promise<CreateCollectionIndexResponse> {
     return this.request({
-      path: NilDbEndpoint.v1.collections.indexesById.replace(
-        ":id",
-        options.collection,
-      ),
+      path: NilDbEndpoint.v1.collections.indexesById.replace(":id", collection),
       method: "POST",
-      body: options.body,
-      token: options.token,
-      responseSchema: z.void(),
+      body,
+      token,
+      responseSchema: CreateCollectionIndexResponse,
     });
   }
 
   /**
    * Drops an index from a collection.
    */
-  dropCollectionIndex(options: {
-    collection: Uuid;
-    index: Name;
-    token: string;
-  }): Promise<void> {
+  dropCollectionIndex(
+    token: string,
+    collection: Uuid,
+    index: Name,
+  ): Promise<DropCollectionIndexResponse> {
     return this.request({
       path: NilDbEndpoint.v1.collections.indexesByNameById
-        .replace(":id", options.collection)
-        .replace(":name", options.index),
+        .replace(":id", collection)
+        .replace(":name", index),
       method: "DELETE",
-      token: options.token,
-      responseSchema: z.void(),
+      token,
+      responseSchema: DropCollectionIndexResponse,
     });
   }
 
   /**
    * Lists all queries owned by the authenticated builder.
    */
-  getQueries(options: { token: string }): Promise<ReadQueriesResponse> {
+  getQueries(token: string): Promise<ReadQueriesResponse> {
     return this.request({
       path: NilDbEndpoint.v1.queries.root,
-      token: options.token,
+      token,
       responseSchema: ReadQueriesResponse,
     });
   }
@@ -225,13 +221,10 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Retrieves a query by id.
    */
-  getQuery(options: {
-    query: Uuid;
-    token: string;
-  }): Promise<ReadQueryResponse> {
+  getQuery(token: string, query: Uuid): Promise<ReadQueryResponse> {
     return this.request({
-      path: NilDbEndpoint.v1.queries.byId.replace(":id", options.query),
-      token: options.token,
+      path: NilDbEndpoint.v1.queries.byId.replace(":id", query),
+      token,
       responseSchema: ReadQueryResponse,
     });
   }
@@ -239,43 +232,40 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Creates a new MongoDB aggregation query with variable substitution.
    */
-  createQuery(options: {
-    body: CreateQueryRequest;
-    token: string;
-  }): Promise<void> {
+  createQuery(
+    token: string,
+    body: CreateQueryRequest,
+  ): Promise<CreateQueryResponse> {
     return this.request({
       path: NilDbEndpoint.v1.queries.root,
       method: "POST",
-      body: options.body,
-      token: options.token,
-      responseSchema: z.void(),
+      body,
+      token,
+      responseSchema: CreateQueryResponse,
     });
   }
 
   /**
    * Deletes a query by id.
    */
-  deleteQuery(options: { query: Uuid; token: string }): Promise<void> {
+  deleteQuery(token: string, query: Uuid): Promise<DeleteQueryResponse> {
     return this.request({
-      path: NilDbEndpoint.v1.queries.byId.replace(":id", options.query),
+      path: NilDbEndpoint.v1.queries.byId.replace(":id", query),
       method: "DELETE",
-      token: options.token,
-      responseSchema: z.void(),
+      token,
+      responseSchema: DeleteQueryResponse,
     });
   }
 
   /**
    * Executes a query with variable substitution.
    */
-  runQuery(options: {
-    body: RunQueryRequest;
-    token: string;
-  }): Promise<RunQueryResponse> {
+  runQuery(token: string, body: RunQueryRequest): Promise<RunQueryResponse> {
     return this.request({
       path: NilDbEndpoint.v1.queries.run,
       method: "POST",
-      body: options.body,
-      token: options.token,
+      body,
+      token,
       responseSchema: RunQueryResponse,
     });
   }
@@ -283,45 +273,29 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Retrieves the status and results of a background query job.
    */
-  readQueryRunResults(options: {
-    run: Uuid;
-    token: string;
-  }): Promise<ReadQueryRunByIdResponse> {
+  readQueryRunResults(
+    token: string,
+    run: Uuid,
+  ): Promise<ReadQueryRunByIdResponse> {
     return this.request({
-      path: NilDbEndpoint.v1.queries.runById.replace(":id", options.run),
-      token: options.token,
+      path: NilDbEndpoint.v1.queries.runById.replace(":id", run),
+      token,
       responseSchema: ReadQueryRunByIdResponse,
-    });
-  }
-
-  /**
-   * Uploads owned data records to a schema-validated collection.
-   */
-  createOwnedData(options: {
-    body: CreateOwnedDataRequest;
-    token: string;
-  }): Promise<CreateDataResponse> {
-    return this.request({
-      path: NilDbEndpoint.v1.data.createOwned,
-      method: "POST",
-      body: options.body,
-      token: options.token,
-      responseSchema: CreateDataResponse,
     });
   }
 
   /**
    * Uploads standard data records to a schema-validated collection.
    */
-  createStandardData(options: {
-    body: CreateStandardDataRequest;
-    token: string;
-  }): Promise<CreateDataResponse> {
+  createStandardData(
+    token: string,
+    body: CreateStandardDataRequest,
+  ): Promise<CreateDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.data.createStandard,
       method: "POST",
-      body: options.body,
-      token: options.token,
+      body,
+      token,
       responseSchema: CreateDataResponse,
     });
   }
@@ -329,15 +303,12 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Searches for data matching the provided filter.
    */
-  findData(options: {
-    body: FindDataRequest;
-    token: string;
-  }): Promise<FindDataResponse> {
+  findData(token: string, body: FindDataRequest): Promise<FindDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.data.find,
       method: "POST",
-      body: options.body,
-      token: options.token,
+      body,
+      token,
       responseSchema: FindDataResponse,
     });
   }
@@ -345,15 +316,15 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Updates data records matching the provided filter.
    */
-  updateData(options: {
-    body: UpdateDataRequest;
-    token: string;
-  }): Promise<UpdateDataResponse> {
+  updateData(
+    token: string,
+    body: UpdateDataRequest,
+  ): Promise<UpdateDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.data.update,
       method: "POST",
-      body: options.body,
-      token: options.token,
+      body,
+      token,
       responseSchema: UpdateDataResponse,
     });
   }
@@ -361,15 +332,15 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Deletes data records matching the provided filter.
    */
-  deleteData(options: {
-    body: DeleteDataRequest;
-    token: string;
-  }): Promise<DeleteDataResponse> {
+  deleteData(
+    token: string,
+    body: DeleteDataRequest,
+  ): Promise<DeleteDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.data.delete,
       method: "POST",
-      body: options.body,
-      token: options.token,
+      body,
+      token,
       responseSchema: DeleteDataResponse,
     });
   }
@@ -377,28 +348,27 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Removes all data from a collection.
    */
-  flushData(options: { collection: Uuid; token: string }): Promise<void> {
+  flushData(token: string, collection: Uuid): Promise<FlushDataResponse> {
     return this.request({
-      path: NilDbEndpoint.v1.data.flushById.replace(":id", options.collection),
+      path: NilDbEndpoint.v1.data.flushById.replace(":id", collection),
       method: "DELETE",
-      token: options.token,
-      responseSchema: z.void(),
+      token,
+      responseSchema: FlushDataResponse,
     });
   }
 
   /**
    * Retrieves the most recent data records from a collection.
    */
-  tailData(options: {
-    collection: Uuid;
-    limit?: number;
-    token: string;
-  }): Promise<TailDataResponse> {
-    const limit = options.limit ?? 10;
+  tailData(
+    token: string,
+    collection: Uuid,
+    limit = 10,
+  ): Promise<TailDataResponse> {
     return this.request({
-      path: `${NilDbEndpoint.v1.data.tailById.replace(":id", options.collection)}?limit=${limit}`,
+      path: `${NilDbEndpoint.v1.data.tailById.replace(":id", collection)}?limit=${limit}`,
       method: "GET",
-      token: options.token,
+      token,
       responseSchema: TailDataResponse,
     });
   }

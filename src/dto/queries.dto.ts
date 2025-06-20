@@ -34,8 +34,8 @@ export type CreateQueryRequest = z.infer<typeof CreateQueryRequest>;
 /**
  * Query creation response.
  */
-export const CreateQueryResponse = z.void();
-export type CreateQueryResponse = typeof CreateQueryResponse;
+export const CreateQueryResponse = z.string();
+export type CreateQueryResponse = z.infer<typeof CreateQueryResponse>;
 
 /**
  * Query document data.
@@ -84,8 +84,8 @@ export type DeleteQueryRequest = z.infer<typeof DeleteQueryRequest>;
 /**
  * Query deletion response.
  */
-export const DeleteQueryResponse = z.void();
-export type DeleteQueryResponse = typeof DeleteQueryResponse;
+export const DeleteQueryResponse = z.string();
+export type DeleteQueryResponse = z.infer<typeof DeleteQueryResponse>;
 
 /**
  * Query execution request.

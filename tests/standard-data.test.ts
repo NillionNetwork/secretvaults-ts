@@ -56,7 +56,7 @@ describe("standard-data.test.ts", () => {
       },
     ];
 
-    const results = await builder.createData({
+    const results = await builder.createStandardData({
       body: {
         collection: collection._id,
         data,
