@@ -13,8 +13,8 @@ export type RegisterBuilderRequest = z.infer<typeof RegisterBuilderRequest>;
 /**
  * Builder registration response.
  */
-export const RegisterBuilderResponse = z.void();
-export type RegisterBuilderResponse = typeof RegisterBuilderResponse;
+export const RegisterBuilderResponse = z.string();
+export type RegisterBuilderResponse = z.infer<typeof RegisterBuilderResponse>;
 
 /**
  * Builder profile data.
@@ -39,8 +39,8 @@ export type ReadBuilderProfileResponse = z.infer<
 /**
  * Builder deletion response.
  */
-export const DeleteBuilderResponse = z.void();
-export type DeleteBuilderResponse = typeof DeleteBuilderResponse;
+export const DeleteBuilderResponse = z.string();
+export type DeleteBuilderResponse = z.infer<typeof DeleteBuilderResponse>;
 
 /**
  * Profile update request.
@@ -55,5 +55,7 @@ export type UpdateBuilderProfileRequest = z.infer<
 /**
  * Profile update response.
  */
-export const UpdateProfileResponse = z.void();
-export type UpdateProfileResponse = typeof UpdateProfileResponse;
+export const UpdateBuilderProfileResponse = z.string();
+export type UpdateBuilderProfileResponse = z.infer<
+  typeof UpdateBuilderProfileResponse
+>;

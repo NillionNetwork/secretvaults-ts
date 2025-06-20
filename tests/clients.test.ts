@@ -57,12 +57,16 @@ describe("clients.test.ts", () => {
     test("registration", async ({ c }) => {
       const { builder, expect } = c;
 
-      const result = builder.register({
+      const results = await builder.register({
         name: faker.company.name(),
         did: builder.did.toString(),
       });
 
-      await expect(result).to.resolves.toBeUndefined();
+      const node153c = results["153c"]!;
+      const node2340 = results["2340"]!;
+
+      expect(node153c).toEqual("");
+      expect(node2340).toEqual("");
     });
 
     test("read profile", async ({ c }) => {

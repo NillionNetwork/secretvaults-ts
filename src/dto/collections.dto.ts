@@ -44,6 +44,14 @@ export type CreateCollectionIndexRequest = z.infer<
 >;
 
 /**
+ * Collection index creation response.
+ */
+export const CreateCollectionIndexResponse = z.string();
+export type CreateCollectionIndexResponse = z.infer<
+  typeof CreateCollectionIndexResponse
+>;
+
+/**
  * Drop collection index parameters.
  */
 export const DropCollectionIndexParams = z.object({
@@ -58,7 +66,10 @@ export type DropCollectionIndexParams = z.infer<
 /**
  * Drop collection index response.
  */
-export const DropCollectionIndexResponse = z.void();
+export const DropCollectionIndexResponse = z.string();
+export type DropCollectionIndexResponse = z.infer<
+  typeof DropCollectionIndexResponse
+>;
 
 /**
  * Collection creation request.
@@ -74,7 +85,8 @@ export type CreateCollectionRequest = z.infer<typeof CreateCollectionRequest>;
 /**
  * Collection creation response.
  */
-export const CreateCollectionResponse = z.void();
+export const CreateCollectionResponse = z.string();
+export type CreateCollectionResponse = z.infer<typeof CreateCollectionResponse>;
 
 /**
  * Collection deletion parameters.
@@ -89,7 +101,8 @@ export type DeleteCollectionRequestParams = z.infer<
 /**
  * Collection deletion response.
  */
-export const DeleteCollectionResponse = z.void();
+export const DeleteCollectionResponse = z.string();
+export type DeleteCollectionResponse = z.infer<typeof DeleteCollectionResponse>;
 
 /**
  * Collection metadata read parameters.

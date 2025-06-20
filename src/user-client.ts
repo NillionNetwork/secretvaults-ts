@@ -16,12 +16,15 @@ import type {
 import type { ReadAboutNodeResponse } from "./dto/system.dto";
 import type {
   DeleteDocumentRequestParams,
+  DeleteDocumentResponse,
   GrantAccessToDataRequest,
+  GrantAccessToDataResponse,
   ListDataReferencesResponse,
   ReadDataRequestParams,
   ReadDataResponse,
   ReadUserProfileResponse,
   RevokeAccessToDataRequest,
+  RevokeAccessToDataResponse,
 } from "./dto/users.dto";
 import type { NilDbUserClient } from "./nildb/user-client";
 
@@ -105,7 +108,9 @@ export class SecretVaultUserClient {
     });
   }
 
-  deleteData(params: DeleteDocumentRequestParams): Promise<ByNodeName<void>> {
+  deleteData(
+    params: DeleteDocumentRequestParams,
+  ): Promise<ByNodeName<DeleteDocumentResponse>> {
     return this.executeOnAllNodes(async (client) => {
       const token = this.mintInvocation({
         cmd: NucCmd.nil.db.users.delete,
@@ -116,7 +121,9 @@ export class SecretVaultUserClient {
     });
   }
 
-  grantAccess(body: GrantAccessToDataRequest): Promise<ByNodeName<void>> {
+  grantAccess(
+    body: GrantAccessToDataRequest,
+  ): Promise<ByNodeName<GrantAccessToDataResponse>> {
     return this.executeOnAllNodes(async (client) => {
       const token = this.mintInvocation({
         cmd: NucCmd.nil.db.users.update,
@@ -127,7 +134,9 @@ export class SecretVaultUserClient {
     });
   }
 
-  revokeAccess(body: RevokeAccessToDataRequest): Promise<ByNodeName<void>> {
+  revokeAccess(
+    body: RevokeAccessToDataRequest,
+  ): Promise<ByNodeName<RevokeAccessToDataResponse>> {
     return this.executeOnAllNodes(async (client) => {
       const token = this.mintInvocation({
         cmd: NucCmd.nil.db.users.update,

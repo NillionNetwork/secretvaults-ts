@@ -7,12 +7,15 @@ import {
 import type { ReadAboutNodeResponse } from "#/dto/system.dto";
 import {
   type DeleteDocumentRequestParams,
+  DeleteDocumentResponse,
   type GrantAccessToDataRequest,
+  GrantAccessToDataResponse,
   ListDataReferencesResponse,
   type ReadDataRequestParams,
   ReadDataResponse,
   ReadUserProfileResponse,
   type RevokeAccessToDataRequest,
+  RevokeAccessToDataResponse,
 } from "#/dto/users.dto";
 import { NilDbBaseClient, NilDbBaseClientOptions } from "./base-client";
 
@@ -87,49 +90,49 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Deletes a user-owned data document.
    */
-  async deleteData(
+  deleteData(
     token: string,
     params: DeleteDocumentRequestParams,
-  ): Promise<void> {
-    await this.request({
+  ): Promise<DeleteDocumentResponse> {
+    return this.request({
       path: NilDbEndpoint.v1.users.data.byId
         .replace(":collection", params.collection)
         .replace(":document", params.document),
       method: "DELETE",
       token,
-      responseSchema: z.string(),
+      responseSchema: DeleteDocumentResponse,
     });
   }
 
   /**
    * Grants access to user-owned data.
    */
-  async grantAccess(
+  grantAccess(
     token: string,
     body: GrantAccessToDataRequest,
-  ): Promise<void> {
-    const _result = await this.request({
+  ): Promise<GrantAccessToDataResponse> {
+    return this.request({
       path: NilDbEndpoint.v1.users.data.acl.grant,
       method: "POST",
       body,
       token,
-      responseSchema: z.string(),
+      responseSchema: GrantAccessToDataResponse,
     });
   }
 
   /**
    * Removes access to user-owned data.
    */
-  async revokeAccess(
+  revokeAccess(
     token: string,
     body: RevokeAccessToDataRequest,
-  ): Promise<void> {
-    const _result = await this.request({
+  ): Promise<RevokeAccessToDataResponse> {
+    return this.request({
       path: NilDbEndpoint.v1.users.data.acl.revoke,
       method: "POST",
       body,
       token,
-      responseSchema: z.string(),
+      responseSchema: RevokeAccessToDataResponse,
     });
   }
 }

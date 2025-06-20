@@ -112,6 +112,12 @@ export const FlushDataRequest = z.object({
 export type FlushDataRequest = z.infer<typeof FlushDataRequest>;
 
 /**
+ * Data flush response.
+ */
+export const FlushDataResponse = z.string();
+export type FlushDataResponse = z.infer<typeof FlushDataResponse>;
+
+/**
  * Data drop response.
  */
 export const DropDataResponse = ApiSuccessResponse(
