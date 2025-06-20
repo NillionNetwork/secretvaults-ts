@@ -1,20 +1,19 @@
-import { Keypair, NilauthClient, PayerBuilder } from "@nillion/nuc";
+import { type Keypair, NilauthClient, PayerBuilder } from "@nillion/nuc";
 import { SecretVaultBuilderClient } from "#/builder-client";
 import { createNilDbBuilderClient } from "#/nildb/builder-client";
 import { createNilDbUserClient } from "#/nildb/user-client";
 import { SecretVaultUserClient } from "#/user-client";
 
 export async function createSecretVaultUserClient(options: {
-  secretKey: string;
+  keypair: Keypair;
   baseUrls: string[];
 }): Promise<SecretVaultUserClient> {
-  const { baseUrls, secretKey } = options;
+  const { baseUrls, keypair } = options;
 
   const clientPromises = baseUrls.map((baseUrl) =>
     createNilDbUserClient(baseUrl),
   );
   const clients = await Promise.all(clientPromises);
-  const keypair = Keypair.from(secretKey);
 
   return new SecretVaultUserClient({
     clients,

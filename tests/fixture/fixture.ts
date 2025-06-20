@@ -159,7 +159,7 @@ async function buildContext(
   // create the secret vault user client
   const user = await createSecretVaultUserClient({
     baseUrls: nildbNodesUrls,
-    secretKey: Keypair.generate().privateKey("hex"),
+    keypair: Keypair.generate(),
   });
 
   const builder = await createSecretVaultBuilderClient({
