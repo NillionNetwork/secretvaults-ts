@@ -9,6 +9,7 @@ import type { ReadAboutNodeResponse } from "#/dto/system.dto";
 import {
   type GrantAccessToDataRequest,
   ListDataReferencesResponse,
+  type ReadDataRequestParams,
   ReadDataResponse,
   ReadUserProfileResponse,
   type RevokeAccessToDataRequest,
@@ -72,16 +73,15 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Retrieves user-owned data by collection and document id.
    */
-  readData(options: {
-    token: string;
-    collection: Uuid;
-    document: Uuid;
-  }): Promise<ReadDataResponse> {
+  readData(
+    params: ReadDataRequestParams,
+    token: string,
+  ): Promise<ReadDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.byId
-        .replace(":collection", options.collection)
-        .replace(":document", options.document),
-      token: options.token,
+        .replace(":collection", params.collection)
+        .replace(":document", params.document),
+      token,
       responseSchema: ReadDataResponse,
     });
   }

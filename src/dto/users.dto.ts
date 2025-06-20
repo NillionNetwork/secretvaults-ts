@@ -69,7 +69,7 @@ const OwnedDataDto = z
   // Allow all keys through since each collection will follow a different schema
   .passthrough();
 
-export const ReadDataResponse = ApiSuccessResponse(z.array(OwnedDataDto));
+export const ReadDataResponse = ApiSuccessResponse(OwnedDataDto);
 export type ReadDataResponse = z.infer<typeof ReadDataResponse>;
 
 /**

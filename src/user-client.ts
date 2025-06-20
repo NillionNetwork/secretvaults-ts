@@ -1,10 +1,12 @@
 import {
+  type Command,
   type Did,
   InvocationBody,
   type Keypair,
   NucTokenBuilder,
   NucTokenEnvelopeSchema,
 } from "@nillion/nuc";
+import { intoSecondsFromNow } from "#/common/time";
 import { NucCmd } from "./common/nuc-cmd";
 import type { ByNodeName } from "./common/types";
 import type {
@@ -12,7 +14,12 @@ import type {
   CreateOwnedDataRequest,
 } from "./dto/data.dto";
 import type { ReadAboutNodeResponse } from "./dto/system.dto";
-import type { ReadUserProfileResponse } from "./dto/users.dto";
+import type {
+  ListDataReferencesResponse,
+  ReadDataRequestParams,
+  ReadDataResponse,
+  ReadUserProfileResponse,
+} from "./dto/users.dto";
 import type { NilDbUserClient } from "./nildb/user-client";
 
 export type SecretVaultUserClientOptions = {
@@ -35,6 +42,66 @@ export class SecretVaultUserClient {
     return this._options.clients;
   }
 
+  get keypair(): Keypair {
+    return this._options.keypair;
+  }
+
+  readClusterInfo(): Promise<ByNodeName<ReadAboutNodeResponse>> {
+    return this.executeOnAllNodes((client) => client.aboutNode());
+  }
+
+  readUserProfile(): Promise<ByNodeName<ReadUserProfileResponse>> {
+    return this.executeOnAllNodes(async (client) => {
+      const token = this.mintInvocation({
+        cmd: NucCmd.nil.db.users.root,
+        audience: client.did,
+      });
+
+      return client.getProfile({ token });
+    });
+  }
+
+  createData(options: {
+    body: CreateOwnedDataRequest;
+    delegation: string;
+  }): Promise<ByNodeName<CreateDataResponse>> {
+    return this.executeOnAllNodes(async (client) => {
+      const envelop = NucTokenEnvelopeSchema.parse(options.delegation);
+      const token = NucTokenBuilder.extending(envelop)
+        .audience(client.did)
+        .command(NucCmd.nil.db.data.create)
+        .expiresAt(intoSecondsFromNow(60))
+        .body(new InvocationBody({}))
+        .build(this.keypair.privateKey());
+
+      return client.createOwnedData({ body: options.body, token });
+    });
+  }
+
+  listDataReferences(): Promise<ByNodeName<ListDataReferencesResponse>> {
+    return this.executeOnAllNodes(async (client) => {
+      const token = this.mintInvocation({
+        cmd: NucCmd.nil.db.users.read,
+        audience: client.did,
+      });
+
+      return client.listDataReferences({ token });
+    });
+  }
+
+  readData(
+    params: ReadDataRequestParams,
+  ): Promise<ByNodeName<ReadDataResponse>> {
+    return this.executeOnAllNodes(async (client) => {
+      const token = this.mintInvocation({
+        cmd: NucCmd.nil.db.users.read,
+        audience: client.did,
+      });
+
+      return client.readData(params, token);
+    });
+  }
+
   private async executeOnAllNodes<T>(
     operation: (client: NilDbUserClient) => Promise<T>,
   ): Promise<Record<string, T>> {
@@ -54,37 +121,14 @@ export class SecretVaultUserClient {
     );
   }
 
-  readClusterInfo(): Promise<ByNodeName<ReadAboutNodeResponse>> {
-    return this.executeOnAllNodes((client) => client.aboutNode());
-  }
+  private mintInvocation(options: { cmd: Command; audience: Did }): string {
+    const builder = NucTokenBuilder.invocation({});
 
-  async readUserProfile(): Promise<ByNodeName<ReadUserProfileResponse>> {
-    return this.executeOnAllNodes(async (client) => {
-      const token = NucTokenBuilder.invocation({})
-        .command(NucCmd.nil.db.users.root)
-        .expiresAt(Date.now() + 60 * 1000)
-        .audience(client.did)
-        .build(this._options.keypair.privateKey());
-
-      return client.getProfile({ token });
-    });
-  }
-
-  async createData(options: {
-    body: CreateOwnedDataRequest;
-    delegation: string;
-  }): Promise<ByNodeName<CreateDataResponse>> {
-    return this.executeOnAllNodes(async (client) => {
-      const envelope = NucTokenEnvelopeSchema.parse(options.delegation);
-
-      const token = NucTokenBuilder.extending(envelope)
-        .body(new InvocationBody({}))
-        .command(NucCmd.nil.db.data.create)
-        .expiresAt(Date.now() + 60 * 1000)
-        .audience(client.did)
-        .build(this._options.keypair.privateKey());
-
-      return client.createOwnedData({ body: options.body, token });
-    });
+    return builder
+      .command(options.cmd)
+      .subject(this.did)
+      .audience(options.audience)
+      .expiresAt(intoSecondsFromNow(60))
+      .build(this.keypair.privateKey());
   }
 }
