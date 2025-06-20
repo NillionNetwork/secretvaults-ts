@@ -1,11 +1,11 @@
 import { Did } from "@nillion/nuc";
 import z from "zod";
 import { log } from "#/common/logger";
+import { NilDbEndpoint } from "#/common/paths";
 import {
   NodeHealthCheckResponse,
   ReadAboutNodeResponse,
-} from "./dto/system.dto";
-import { NilDbEndpoint } from "./paths";
+} from "#/dto/system.dto";
 
 export const NilDbBaseClientOptions = z.object({
   about: ReadAboutNodeResponse,

@@ -46,8 +46,8 @@ const UserProfileData = z.object({
 /**
  * User profile response.
  */
-export const ReadProfileResponse = ApiSuccessResponse(UserProfileData);
-export type ReadProfileResponse = z.infer<typeof ReadProfileResponse>;
+export const ReadUserProfileResponse = ApiSuccessResponse(UserProfileData);
+export type ReadUserProfileResponse = z.infer<typeof ReadUserProfileResponse>;
 
 /**
  * Data read request parameters.

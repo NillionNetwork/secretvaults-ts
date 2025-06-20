@@ -72,7 +72,7 @@ describe("clients.test.ts", () => {
       const pairs = Object.entries(results);
 
       expect(Object.keys(results)).toHaveLength(2);
-      for (const [_, profile] of pairs) {
+      for (const [_node, profile] of pairs) {
         expect(profile.data._id).toBe(builder.did.toString());
       }
     });

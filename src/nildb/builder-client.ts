@@ -1,6 +1,18 @@
 import z from "zod";
+import { NilDbEndpoint } from "#/common/paths";
 import type { Uuid } from "#/common/types";
-import { NilDbBaseClient, NilDbBaseClientOptions } from "#/nildb/base-client";
+import {
+  ReadBuilderProfileResponse,
+  type RegisterBuilderRequest,
+  type UpdateBuilderProfileRequest,
+} from "#/dto/builders.dto";
+import {
+  type CreateCollectionIndexRequest,
+  type CreateCollectionRequest,
+  ListCollectionsResponse,
+  ReadCollectionMetadataResponse,
+} from "#/dto/collections.dto";
+import type { Name } from "#/dto/common";
 import {
   CreateDataResponse,
   type CreateOwnedDataRequest,
@@ -12,21 +24,7 @@ import {
   TailDataResponse,
   type UpdateDataRequest,
   UpdateDataResponse,
-} from "#/nildb/dto/data.dto";
-import type { ReadAboutNodeResponse } from "#/nildb/dto/system.dto";
-import { NilDbEndpoint } from "#/nildb/paths";
-import {
-  ReadBuilderProfileResponse,
-  type RegisterBuilderRequest,
-  type UpdateBuilderProfileRequest,
-} from "./dto/builders.dto";
-import {
-  type CreateCollectionIndexRequest,
-  type CreateCollectionRequest,
-  ListCollectionsResponse,
-  ReadCollectionMetadataResponse,
-} from "./dto/collections.dto";
-import type { Name } from "./dto/common";
+} from "#/dto/data.dto";
 import {
   type CreateQueryRequest,
   ReadQueriesResponse,
@@ -34,7 +32,9 @@ import {
   ReadQueryRunByIdResponse,
   type RunQueryRequest,
   RunQueryResponse,
-} from "./dto/queries.dto";
+} from "#/dto/queries.dto";
+import type { ReadAboutNodeResponse } from "#/dto/system.dto";
+import { NilDbBaseClient, NilDbBaseClientOptions } from "#/nildb/base-client";
 
 export const NilDbBuilderClientOptions = z.object({
   ...NilDbBaseClientOptions.shape,

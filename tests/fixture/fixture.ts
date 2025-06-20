@@ -3,15 +3,13 @@ import { MongoClient } from "mongodb";
 import type { Logger } from "pino";
 import type { JsonObject } from "type-fest";
 import * as vitest from "vitest";
+import type { SecretVaultBuilderClient } from "#/builder-client";
 import type { Uuid } from "#/common/types";
 import {
   createSecretVaultBuilderClient,
-  type SecretVaultBuilderClient,
-} from "#/secretvault/builder-client";
-import {
   createSecretVaultUserClient,
-  type SecretVaultUserClient,
-} from "#/secretvault/user-client";
+} from "#/factory";
+import type { SecretVaultUserClient } from "#/user-client";
 import { createTestLogger } from "./utils";
 
 export type FixtureContext = {
@@ -162,7 +160,6 @@ async function buildContext(
   const user = await createSecretVaultUserClient({
     baseUrls: nildbNodesUrls,
     secretKey: Keypair.generate().privateKey("hex"),
-    dataConflictResolutionStrategy: "random",
   });
 
   const builder = await createSecretVaultBuilderClient({
@@ -172,7 +169,6 @@ async function buildContext(
       auth: nilauthUrl,
       dbs: nildbNodesUrls,
     },
-    dataConflictResolutionStrategy: "random",
   });
 
   const payer = await new PayerBuilder()

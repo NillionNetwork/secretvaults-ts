@@ -2,9 +2,9 @@ import * as crypto from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { NucTokenBuilder } from "@nillion/nuc";
 import { describe } from "vitest";
+import { NucCmd } from "#/common/nuc-cmd";
 import type { Uuid } from "#/common/types";
-import type { CreateCollectionRequest } from "#/nildb/dto/collections.dto";
-import { NucCmd } from "#/nildb/nuc-cmd";
+import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import collection from "./data/owned.collection.json";
 import query from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -39,7 +39,7 @@ describe("owned-data.test.ts", () => {
     const results = await builder.readBuilderProfile();
     const pairs = Object.entries(results);
 
-    for (const [_name, result] of pairs) {
+    for (const [_node, result] of pairs) {
       expect(result.data.collections).toHaveLength(1);
       expect(result.data.collections.at(0)).toBe(collection._id);
     }

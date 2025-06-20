@@ -1,2 +1,2 @@
-export * from "./secretvault/builder-client";
-export * from "./secretvault/user-client";
+export * from "./builder-client";
+export * from "./user-client";

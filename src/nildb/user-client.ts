@@ -1,19 +1,19 @@
 import z from "zod";
+import { NilDbEndpoint } from "#/common/paths";
 import type { Uuid } from "#/common/types";
 import {
   CreateDataResponse,
   type CreateOwnedDataRequest,
-} from "#/nildb/dto/data.dto";
-import type { ReadAboutNodeResponse } from "#/nildb/dto/system.dto";
-import { NilDbBaseClient, NilDbBaseClientOptions } from "./base-client";
+} from "#/dto/data.dto";
+import type { ReadAboutNodeResponse } from "#/dto/system.dto";
 import {
   type GrantAccessToDataRequest,
   ListDataReferencesResponse,
   ReadDataResponse,
-  ReadProfileResponse,
+  ReadUserProfileResponse,
   type RevokeAccessToDataRequest,
-} from "./dto/users.dto";
-import { NilDbEndpoint } from "./paths";
+} from "#/dto/users.dto";
+import { NilDbBaseClient, NilDbBaseClientOptions } from "./base-client";
 
 export const NilDbUserClientOptions = z.object({
   ...NilDbBaseClientOptions.shape,
@@ -32,11 +32,11 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Retrieves the authenticated user's profile information.
    */
-  getProfile(options: { token: string }): Promise<ReadProfileResponse> {
+  getProfile(options: { token: string }): Promise<ReadUserProfileResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.me,
       token: options.token,
-      responseSchema: ReadProfileResponse,
+      responseSchema: ReadUserProfileResponse,
     });
   }
 

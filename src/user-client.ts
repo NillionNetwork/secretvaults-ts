@@ -1,32 +1,21 @@
 import {
   type Did,
   InvocationBody,
-  Keypair,
+  type Keypair,
   NucTokenBuilder,
   NucTokenEnvelopeSchema,
 } from "@nillion/nuc";
+import { NucCmd } from "./common/nuc-cmd";
+import type { ByNodeName } from "./common/types";
 import type {
   CreateDataResponse,
   CreateOwnedDataRequest,
-} from "#/nildb/dto/data.dto";
-import type { ReadAboutNodeResponse } from "#/nildb/dto/system.dto";
-import { NucCmd } from "#/nildb/nuc-cmd";
-import {
-  createNilDbUserClient,
-  type NilDbUserClient,
-} from "#/nildb/user-client";
-import type {
-  ByNodeName,
-  ClusterUserProfiles,
-  DataConflictResolutionStrategy,
-} from "#/secretvault/types";
+} from "./dto/data.dto";
+import type { ReadAboutNodeResponse } from "./dto/system.dto";
+import type { ReadUserProfileResponse } from "./dto/users.dto";
+import type { NilDbUserClient } from "./nildb/user-client";
 
 export type SecretVaultUserClientOptions = {
-  dataConflictResolutionStrategy:
-    | "random"
-    | "last-updated"
-    | "first-response"
-    | "priority-order";
   keypair: Keypair;
   clients: NilDbUserClient[];
 };
@@ -69,7 +58,7 @@ export class SecretVaultUserClient {
     return this.executeOnAllNodes((client) => client.aboutNode());
   }
 
-  async readUserProfile(): Promise<ClusterUserProfiles> {
+  async readUserProfile(): Promise<ByNodeName<ReadUserProfileResponse>> {
     return this.executeOnAllNodes(async (client) => {
       const token = NucTokenBuilder.invocation({})
         .command(NucCmd.nil.db.users.root)
@@ -98,24 +87,4 @@ export class SecretVaultUserClient {
       return client.createOwnedData({ body: options.body, token });
     });
   }
-}
-
-export async function createSecretVaultUserClient(options: {
-  secretKey: string;
-  baseUrls: string[];
-  dataConflictResolutionStrategy: DataConflictResolutionStrategy;
-}): Promise<SecretVaultUserClient> {
-  const { baseUrls, secretKey, dataConflictResolutionStrategy } = options;
-
-  const clientPromises = baseUrls.map((baseUrl) =>
-    createNilDbUserClient(baseUrl),
-  );
-  const clients = await Promise.all(clientPromises);
-  const keypair = Keypair.from(secretKey);
-
-  return new SecretVaultUserClient({
-    dataConflictResolutionStrategy,
-    clients,
-    keypair,
-  });
 }
