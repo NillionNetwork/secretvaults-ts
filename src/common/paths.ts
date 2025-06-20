@@ -43,7 +43,6 @@ export const NilDbEndpoint = {
         aclById: "/v1/users/data/:collection/:document/acl",
         acl: {
           grant: "/v1/users/data/acl/grant",
-          update: "/v1/users/data/acl/update",
           revoke: "/v1/users/data/acl/revoke",
         },
       },
