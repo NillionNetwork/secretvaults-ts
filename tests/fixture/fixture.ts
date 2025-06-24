@@ -2,12 +2,8 @@ import { Keypair, NilauthClient, PayerBuilder } from "@nillion/nuc";
 import { MongoClient } from "mongodb";
 import type { Logger } from "pino";
 import * as vitest from "vitest";
-import type { SecretVaultBuilderClient } from "#/builder-client";
-import {
-  createSecretVaultBuilderClient,
-  createSecretVaultUserClient,
-} from "#/factory";
-import type { SecretVaultUserClient } from "#/user-client";
+import { SecretVaultBuilderClient } from "#/builder-client";
+import { SecretVaultUserClient } from "#/user-client";
 import { createTestLogger } from "./utils";
 
 /**
@@ -153,12 +149,12 @@ async function buildContext(
   const db = await MongoClient.connect(mongodbUri);
 
   // create the secret vault user client
-  const user = await createSecretVaultUserClient({
+  const user = await SecretVaultUserClient.from({
     baseUrls: nildbNodesUrls,
     keypair: Keypair.generate(),
   });
 
-  const builder = await createSecretVaultBuilderClient({
+  const builder = await SecretVaultBuilderClient.from({
     keypair: Keypair.generate(),
     urls: {
       chain: nilchainUrl,

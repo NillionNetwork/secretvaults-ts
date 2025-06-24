@@ -1,12 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { Keypair, NucTokenBuilder } from "@nillion/nuc";
 import { describe } from "vitest";
-import type { SecretVaultBuilderClient } from "#/builder-client";
+import { SecretVaultBuilderClient } from "#/builder-client";
 import { NucCmd } from "#/common/nuc-cmd";
 import { intoSecondsFromNow } from "#/common/time";
 import type { Uuid } from "#/common/types";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
-import { createSecretVaultBuilderClient } from "#/factory";
 import collection from "./data/owned.collection.json";
 import query from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -32,7 +31,7 @@ describe("owned-data.test.ts", () => {
       name: faker.company.name(),
     });
 
-    otherBuilder = await createSecretVaultBuilderClient({
+    otherBuilder = await SecretVaultBuilderClient.from({
       keypair: Keypair.generate(),
       urls: env.urls,
     });

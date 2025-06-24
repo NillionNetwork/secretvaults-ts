@@ -1,12 +1,15 @@
+import type { ClusterKey, SecretKey } from "@nillion/blindfold";
 import {
   type Did,
   InvocationBody,
   type Keypair,
-  type NilauthClient,
+  NilauthClient,
   NucTokenBuilder,
   type NucTokenEnvelope,
+  PayerBuilder,
   type SubscriptionStatusResponse,
 } from "@nillion/nuc";
+import { type BlindfoldFactoryConfig, toBlindfoldKey } from "#/blindfold";
 import { intoSecondsFromNow } from "#/common/time";
 import { NucCmd } from "./common/nuc-cmd";
 import type { ByNodeName, Uuid } from "./common/types";
@@ -52,7 +55,10 @@ import type {
   RunQueryResponse,
 } from "./dto/queries.dto";
 import type { ReadAboutNodeResponse } from "./dto/system.dto";
-import type { NilDbBuilderClient } from "./nildb/builder-client";
+import {
+  createNilDbBuilderClient,
+  type NilDbBuilderClient,
+} from "./nildb/builder-client";
 
 /**
  *
@@ -61,12 +67,68 @@ export type SecretVaultBuilderOptions = {
   nilauthClient: NilauthClient;
   clients: NilDbBuilderClient[];
   keypair: Keypair;
+  key?: SecretKey | ClusterKey;
 };
 
 /**
  * - payments are not handled by the builder client
  */
 export class SecretVaultBuilderClient {
+  static async from(options: {
+    keypair: Keypair;
+    urls: {
+      chain: string;
+      auth: string;
+      dbs: string[];
+    };
+    blindfold?: BlindfoldFactoryConfig;
+  }): Promise<SecretVaultBuilderClient> {
+    const { urls, keypair, blindfold } = options;
+
+    const payerBuilder = await new PayerBuilder()
+      .keypair(keypair)
+      .chainUrl(urls.chain)
+      .build();
+    const nilauthClient = await NilauthClient.from(urls.auth, payerBuilder);
+
+    // Create clients for each node
+    const clientPromises = urls.dbs.map((base) =>
+      createNilDbBuilderClient(base),
+    );
+    const clients = await Promise.all(clientPromises);
+
+    if (!blindfold) {
+      // No encryption
+      return new SecretVaultBuilderClient({
+        clients,
+        keypair,
+        nilauthClient,
+      });
+    }
+
+    if ("key" in blindfold) {
+      // Use a pre-existing key
+      return new SecretVaultBuilderClient({
+        clients,
+        keypair,
+        nilauthClient,
+        key: blindfold.key,
+      });
+    }
+
+    const key = await toBlindfoldKey({
+      ...blindfold,
+      clusterSize: clients.length,
+    });
+
+    return new SecretVaultBuilderClient({
+      clients,
+      keypair,
+      nilauthClient,
+      key,
+    });
+  }
+
   _options: SecretVaultBuilderOptions;
   #rootToken: NucTokenEnvelope | null = null;
 

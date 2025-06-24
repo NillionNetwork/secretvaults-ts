@@ -1,3 +1,4 @@
+import type { ClusterKey, SecretKey } from "@nillion/blindfold";
 import {
   type Command,
   type Did,
@@ -6,8 +7,9 @@ import {
   NucTokenBuilder,
   NucTokenEnvelopeSchema,
 } from "@nillion/nuc";
-import { intoSecondsFromNow } from "#/common/time";
+import { type BlindfoldFactoryConfig, toBlindfoldKey } from "./blindfold";
 import { NucCmd } from "./common/nuc-cmd";
+import { intoSecondsFromNow } from "./common/time";
 import type { ByNodeName } from "./common/types";
 import type {
   CreateDataResponse,
@@ -26,14 +28,59 @@ import type {
   RevokeAccessToDataRequest,
   RevokeAccessToDataResponse,
 } from "./dto/users.dto";
-import type { NilDbUserClient } from "./nildb/user-client";
+import {
+  createNilDbUserClient,
+  type NilDbUserClient,
+} from "./nildb/user-client";
 
 export type SecretVaultUserClientOptions = {
   keypair: Keypair;
   clients: NilDbUserClient[];
+  key?: SecretKey | ClusterKey;
 };
 
 export class SecretVaultUserClient {
+  static async from(options: {
+    keypair: Keypair;
+    baseUrls: string[];
+    blindfold?: BlindfoldFactoryConfig;
+  }): Promise<SecretVaultUserClient> {
+    const { baseUrls, keypair, blindfold } = options;
+
+    // Create clients
+    const clientPromises = baseUrls.map((baseUrl) =>
+      createNilDbUserClient(baseUrl),
+    );
+    const clients = await Promise.all(clientPromises);
+
+    if (!blindfold) {
+      // No encryption
+      return new SecretVaultUserClient({
+        clients,
+        keypair,
+      });
+    }
+
+    if ("key" in blindfold) {
+      return new SecretVaultUserClient({
+        clients,
+        keypair,
+        key: blindfold.key,
+      });
+    }
+
+    const key = await toBlindfoldKey({
+      ...blindfold,
+      clusterSize: clients.length,
+    });
+
+    return new SecretVaultUserClient({
+      clients,
+      keypair,
+      key,
+    });
+  }
+
   _options: SecretVaultUserClientOptions;
 
   constructor(options: SecretVaultUserClientOptions) {
