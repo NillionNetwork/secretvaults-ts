@@ -1,4 +1,4 @@
-# secretvault-ts
+# secretvaults-ts
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/NillionNetwork/secretvault-ts/.github%2Fworkflows%2Fci.yaml)
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/NillionNetwork/secretvault-ts)
