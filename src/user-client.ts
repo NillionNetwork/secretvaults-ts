@@ -7,7 +7,12 @@ import {
   NucTokenBuilder,
   NucTokenEnvelopeSchema,
 } from "@nillion/nuc";
-import { type BlindfoldFactoryConfig, toBlindfoldKey } from "./blindfold";
+import {
+  type BlindfoldFactoryConfig,
+  conceal,
+  reveal,
+  toBlindfoldKey,
+} from "./blindfold";
 import { NucCmd } from "./common/nuc-cmd";
 import { intoSecondsFromNow } from "./common/time";
 import type { ByNodeName } from "./common/types";
@@ -114,11 +119,23 @@ export class SecretVaultUserClient {
     });
   }
 
-  createData(
+  async createData(
     delegation: string,
     body: CreateOwnedDataRequest,
   ): Promise<ByNodeName<CreateDataResponse>> {
-    return this.executeOnAllNodes(async (client) => {
+    let concealed = null;
+    const key = this._options.key;
+    if (key) {
+      concealed = await Promise.all(body.data.map((d) => conceal(key, d)));
+    }
+
+    if (concealed && concealed.at(0)?.length !== this.nodes.length) {
+      throw new Error(
+        "Concealed data shares do not match the number of nodes.",
+      );
+    }
+
+    return this.executeOnAllNodes(async (client, index) => {
       const envelop = NucTokenEnvelopeSchema.parse(delegation);
       const token = NucTokenBuilder.extending(envelop)
         .audience(client.did)
@@ -127,7 +144,12 @@ export class SecretVaultUserClient {
         .body(new InvocationBody({}))
         .build(this.keypair.privateKey());
 
-      return client.createOwnedData(token, body);
+      const nodeBody: CreateOwnedDataRequest = { ...body };
+      if (concealed) {
+        nodeBody.data = concealed.map((s) => s[index]);
+      }
+
+      return client.createOwnedData(token, nodeBody);
     });
   }
 
@@ -142,17 +164,31 @@ export class SecretVaultUserClient {
     });
   }
 
-  readData(
-    params: ReadDataRequestParams,
-  ): Promise<ByNodeName<ReadDataResponse>> {
-    return this.executeOnAllNodes(async (client) => {
+  async readData(params: ReadDataRequestParams): Promise<ReadDataResponse> {
+    // 1. Fetch the raw document share from all nodes.
+    const resultByNode = await this.executeOnAllNodes(async (client) => {
       const token = this.mintInvocation({
         cmd: NucCmd.nil.db.users.read,
         audience: client.did,
       });
-
       return client.readData(token, params);
     });
+
+    const { key } = this._options;
+
+    // 2. If no key is configured, return the response from the first node
+    if (!key) {
+      return Object.values(resultByNode).at(0)!;
+    }
+
+    // 3. If a key exists, collect the .data property from each node's response.
+    const shares = Object.values(resultByNode).map((r) => r.data);
+
+    // 4. Reveal (unify and decrypt any shares)
+    const revealedDoc = await reveal(key, shares);
+
+    // 5. Return the unified document
+    return { data: revealedDoc } as ReadDataResponse;
   }
 
   deleteData(
@@ -195,11 +231,11 @@ export class SecretVaultUserClient {
   }
 
   private async executeOnAllNodes<T>(
-    operation: (client: NilDbUserClient) => Promise<T>,
+    operation: (client: NilDbUserClient, index: number) => Promise<T>,
   ): Promise<Record<string, T>> {
-    const promises = this.nodes.map(async (client) => ({
+    const promises = this.nodes.map(async (client, index) => ({
       name: client.name,
-      result: await operation(client),
+      result: await operation(client, index),
     }));
 
     const results = await Promise.all(promises);
