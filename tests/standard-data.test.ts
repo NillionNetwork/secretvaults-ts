@@ -1,9 +1,8 @@
 import * as crypto from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
-import type { ByNodeName, Uuid } from "#/common/types";
+import type { ByNodeName, Did, Uuid } from "#/common/types";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
-import type { Did } from "#/dto/common";
 import collection from "./data/standard.collection.json";
 import query from "./data/standard.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -27,12 +26,12 @@ describe("standard-data.test.ts", () => {
     const { builder } = c;
 
     await builder.register({
-      did: builder.did.toString(),
+      did: builder.did.toString() as Did,
       name: faker.company.name(),
     });
 
-    nildbAId = builder.nodes.at(0)?.id.toString()!;
-    nildbBId = builder.nodes.at(1)?.id.toString()!;
+    nildbAId = builder.nodes.at(0)?.id.toString()! as Did;
+    nildbBId = builder.nodes.at(1)?.id.toString()! as Did;
   });
   afterAll(async (_c) => {});
 
@@ -125,8 +124,8 @@ describe("standard-data.test.ts", () => {
       variables: { name: "tim" },
     });
     const runs = Object.entries(runResults).reduce(
-      (acc, [name, value]) => {
-        acc[name] = value.data as Uuid;
+      (acc, [id, value]) => {
+        acc[id as Did] = value.data as Uuid;
         return acc;
       },
       {} as ByNodeName<Uuid>,

@@ -4,7 +4,7 @@ import { describe } from "vitest";
 import { SecretVaultBuilderClient } from "#/builder-client";
 import { NucCmd } from "#/common/nuc-cmd";
 import { intoSecondsFromNow } from "#/common/time";
-import type { Uuid } from "#/common/types";
+import type { Did, Uuid } from "#/common/types";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import collection from "./data/owned.collection.json";
 import query from "./data/owned.query.json";
@@ -27,7 +27,7 @@ describe("owned-data.test.ts", () => {
     const { builder, env, payer } = c;
 
     await builder.register({
-      did: builder.did.toString(),
+      did: builder.did.toString() as Did,
       name: faker.company.name(),
     });
 
@@ -43,7 +43,7 @@ describe("owned-data.test.ts", () => {
     await otherBuilder.refreshRootToken();
 
     await otherBuilder.register({
-      did: otherBuilder.did.toString(),
+      did: otherBuilder.did.toString() as Did,
       name: faker.company.name(),
     });
   });
@@ -73,9 +73,9 @@ describe("owned-data.test.ts", () => {
       .build(builder.keypair.privateKey());
 
     const results = await user.createData(delegation, {
-      owner: user.did.toString(),
+      owner: user.did.toString() as Did,
       acl: {
-        grantee: builder.did.toString(),
+        grantee: builder.did.toString() as Did,
         read: true,
         write: false,
         execute: true,
@@ -120,7 +120,7 @@ describe("owned-data.test.ts", () => {
       collection: collection._id,
       document: record._id,
       acl: {
-        grantee: otherBuilder.did.toString(),
+        grantee: otherBuilder.did.toString() as Did,
         read: true,
         write: false,
         execute: false,
@@ -152,7 +152,7 @@ describe("owned-data.test.ts", () => {
       collection: collection._id,
       document: record._id,
       acl: {
-        grantee: otherBuilder.did.toString(),
+        grantee: otherBuilder.did.toString() as Did,
         read: true,
         write: true,
         execute: false,
@@ -161,7 +161,7 @@ describe("owned-data.test.ts", () => {
 
     // revoke access to otherBuilder
     await user.revokeAccess({
-      grantee: otherBuilder.did.toString(),
+      grantee: otherBuilder.did.toString() as Did,
       collection: collection._id,
       document: record._id,
     });

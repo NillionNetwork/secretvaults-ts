@@ -1,7 +1,6 @@
 import type { ClusterKey, SecretKey } from "@nillion/blindfold";
 import { conceal, reveal } from "#/common/blindfold";
-import type { ByNodeName } from "#/common/types";
-import type { Did } from "#/dto/common";
+import type { ByNodeName, Did } from "#/common/types";
 import type { NilDbBaseClient } from "#/nildb/base-client";
 
 /**
@@ -68,7 +67,7 @@ export function preparePlaintextRequest<T>(options: {
   const { clients, body } = options;
 
   const pairs: [Did, T][] = clients.map(
-    (c) => [c.id.toString(), { ...body }] as const,
+    (c) => [c.id.toString() as Did, { ...body }] as const,
   );
 
   return Object.fromEntries(pairs);

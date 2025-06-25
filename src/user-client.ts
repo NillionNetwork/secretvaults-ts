@@ -1,9 +1,9 @@
 import type { ClusterKey, SecretKey } from "@nillion/blindfold";
 import {
   type Command,
-  type Did,
   InvocationBody,
   type Keypair,
+  type Did as NucDid,
   NucTokenBuilder,
   NucTokenEnvelopeSchema,
 } from "@nillion/nuc";
@@ -20,7 +20,7 @@ import {
 } from "./common/cluster";
 import { NucCmd } from "./common/nuc-cmd";
 import { intoSecondsFromNow } from "./common/time";
-import type { ByNodeName } from "./common/types";
+import { type ByNodeName, Did } from "./common/types";
 import type {
   CreateDataResponse,
   CreateOwnedDataRequest,
@@ -103,7 +103,7 @@ export class SecretVaultUserClient {
     this._options = options;
   }
 
-  get did(): Did {
+  get did(): NucDid {
     return this._options.keypair.toDid();
   }
 
@@ -161,7 +161,8 @@ export class SecretVaultUserClient {
         .body(new InvocationBody({}))
         .build(this.keypair.privateKey());
 
-      const payload = nodePayloads[client.id.toString()];
+      const id = Did.parse(client.id.toString());
+      const payload = nodePayloads[id];
       return client.createOwnedData(token, payload);
     });
   }
@@ -254,7 +255,10 @@ export class SecretVaultUserClient {
     });
   }
 
-  private mintInvocation(options: { command: Command; audience: Did }): string {
+  private mintInvocation(options: {
+    command: Command;
+    audience: NucDid;
+  }): string {
     const builder = NucTokenBuilder.invocation({});
 
     return builder

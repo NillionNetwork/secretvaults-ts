@@ -1,5 +1,6 @@
-import z from "zod";
-import { ApiSuccessResponse, Did } from "./common";
+import { z } from "zod/v4";
+import { Did } from "#/common/types";
+import { ApiSuccessResponse } from "./common";
 
 /**
  * MongoDB aggregation pipeline variable validation.
@@ -9,6 +10,7 @@ const VariablePath = z
   .string()
   .transform((path) => PATH_EXPRESSION.exec(path))
   .refine((match) => match !== null, "invalid PATH")
+  // @ts-expect-error the refine previous checks for null
   .transform((match) => match[0]);
 
 /**
@@ -23,9 +25,9 @@ export const QueryVariableValidator = z.object({
  * Query creation request.
  */
 export const CreateQueryRequest = z.object({
-  _id: z.string().uuid(),
+  _id: z.uuid(),
   name: z.string().min(1).max(100),
-  collection: z.string().uuid(),
+  collection: z.uuid(),
   variables: z.record(z.string(), QueryVariableValidator),
   pipeline: z.array(z.record(z.string(), z.unknown())),
 });
@@ -41,12 +43,12 @@ export type CreateQueryResponse = z.infer<typeof CreateQueryResponse>;
  * Query document data.
  */
 const QueryDocumentResponse = z.object({
-  _id: z.string().uuid(),
-  _created: z.string().datetime(),
-  _updated: z.string().datetime(),
+  _id: z.uuid(),
+  _created: z.iso.datetime(),
+  _updated: z.iso.datetime(),
   owner: Did,
   name: z.string().min(1).max(100),
-  collection: z.string().uuid(),
+  collection: z.uuid(),
   variables: z.record(z.string(), QueryVariableValidator),
   pipeline: z.array(z.record(z.string(), z.unknown())),
 });
@@ -69,7 +71,7 @@ export type ReadQueryResponse = z.infer<typeof ReadQueryResponse>;
  * Query ID path parameters.
  */
 export const ByIdRequestParams = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 export type ByIdRequestParams = z.infer<typeof ByIdRequestParams>;
 
@@ -77,7 +79,7 @@ export type ByIdRequestParams = z.infer<typeof ByIdRequestParams>;
  * Query deletion request.
  */
 export const DeleteQueryRequest = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 export type DeleteQueryRequest = z.infer<typeof DeleteQueryRequest>;
 
@@ -91,7 +93,7 @@ export type DeleteQueryResponse = z.infer<typeof DeleteQueryResponse>;
  * Query execution request.
  */
 export const RunQueryRequest = z.object({
-  _id: z.string().uuid(),
+  _id: z.uuid(),
   variables: z.record(z.string(), z.unknown()),
 });
 export type RunQueryRequest = z.infer<typeof RunQueryRequest>;
@@ -99,7 +101,7 @@ export type RunQueryRequest = z.infer<typeof RunQueryRequest>;
 /**
  * Query execution response.
  */
-export const RunQueryResponse = ApiSuccessResponse(z.string().uuid());
+export const RunQueryResponse = ApiSuccessResponse(z.uuid());
 export type RunQueryResponse = z.infer<typeof RunQueryResponse>;
 
 /**
@@ -117,11 +119,11 @@ export type RunQueryResultStatus = z.infer<typeof RunQueryResultStatus>;
  * Query job data.
  */
 const ReadQueryRunByIdDto = z.object({
-  _id: z.string().uuid(),
-  query: z.string().uuid(),
+  _id: z.uuid(),
+  query: z.uuid(),
   status: RunQueryResultStatus,
-  started: z.string().datetime().optional(),
-  completed: z.string().datetime().optional(),
+  started: z.iso.datetime().optional(),
+  completed: z.iso.datetime().optional(),
   result: z.unknown().optional(),
   errors: z.array(z.string()).optional(),
 });

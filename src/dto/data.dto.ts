@@ -1,5 +1,6 @@
-import { z } from "zod";
-import { ApiSuccessResponse, Did } from "./common";
+import { z } from "zod/v4";
+import { Did } from "#/common/types";
+import { ApiSuccessResponse } from "./common";
 import { AclDto } from "./users.dto";
 
 /**
@@ -7,7 +8,7 @@ import { AclDto } from "./users.dto";
  */
 export const CreateOwnedDataRequest = z.object({
   owner: Did,
-  collection: z.string().uuid(),
+  collection: z.uuid(),
   data: z.array(z.record(z.string(), z.unknown())).min(1),
   acl: AclDto,
 });
@@ -17,7 +18,7 @@ export type CreateOwnedDataRequest = z.infer<typeof CreateOwnedDataRequest>;
  * Standard data creation request.
  */
 export const CreateStandardDataRequest = z.object({
-  collection: z.string().uuid(),
+  collection: z.uuid(),
   data: z.array(z.record(z.string(), z.unknown())).min(1),
 });
 export type CreateStandardDataRequest = z.infer<
@@ -29,7 +30,7 @@ export type CreateStandardDataRequest = z.infer<
  */
 export const CreateDataResponse = ApiSuccessResponse(
   z.object({
-    created: z.array(z.string().uuid()),
+    created: z.array(z.uuid()),
     errors: z.array(
       z.object({
         error: z.string(),
@@ -44,7 +45,7 @@ export type CreateDataResponse = z.infer<typeof CreateDataResponse>;
  * Data update request.
  */
 export const UpdateDataRequest = z.object({
-  collection: z.string().uuid(),
+  collection: z.uuid(),
   filter: z.record(z.string(), z.unknown()),
   update: z.record(z.string(), z.unknown()),
 });
@@ -68,7 +69,7 @@ export type UpdateDataResponse = z.infer<typeof UpdateDataResponse>;
  * Data find request.
  */
 export const FindDataRequest = z.object({
-  collection: z.string().uuid(),
+  collection: z.uuid(),
   filter: z.record(z.string(), z.unknown()),
 });
 export type FindDataRequest = z.infer<typeof FindDataRequest>;
@@ -85,7 +86,7 @@ export type FindDataResponse = z.infer<typeof FindDataResponse>;
  * Data deletion request.
  */
 export const DeleteDataRequest = z.object({
-  collection: z.string().uuid(),
+  collection: z.uuid(),
   filter: z
     .record(z.string(), z.unknown())
     .refine((obj) => Object.keys(obj).length > 0, "Filter cannot be empty"),
@@ -107,7 +108,7 @@ export type DeleteDataResponse = z.infer<typeof DeleteDataResponse>;
  * Data flush request.
  */
 export const FlushDataRequest = z.object({
-  collection: z.string().uuid(),
+  collection: z.uuid(),
 });
 export type FlushDataRequest = z.infer<typeof FlushDataRequest>;
 
@@ -132,7 +133,7 @@ export type DropDataResponse = z.infer<typeof DropDataResponse>;
  * Data collection ID parameters.
  */
 export const DataSchemaByIdRequestParams = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 export type DataSchemaByIdRequestParams = z.infer<
   typeof DataSchemaByIdRequestParams
@@ -142,7 +143,7 @@ export type DataSchemaByIdRequestParams = z.infer<
  * Data tail request parameters.
  */
 export const TailDataRequestParams = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 export type TailDataRequestParams = z.infer<typeof TailDataRequestParams>;
 

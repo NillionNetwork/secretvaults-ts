@@ -1,7 +1,7 @@
 import * as crypto from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
-import type { Uuid } from "#/common/types";
+import type { Did, Uuid } from "#/common/types";
 import collectionJson from "./data/owned.collection.json";
 import queryJson from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -12,7 +12,15 @@ describe("clients.test.ts", () => {
   collectionJson._id = crypto.randomUUID().toString() as Uuid;
   queryJson._id = crypto.randomUUID().toString() as Uuid;
 
-  beforeAll(async (_c) => {});
+  let nildbAId: Did;
+  let nildbBId: Did;
+
+  beforeAll(async (c) => {
+    const { builder } = c;
+
+    nildbAId = builder.nodes.at(0)?.id.toString()! as Did;
+    nildbBId = builder.nodes.at(1)?.id.toString()! as Did;
+  });
   afterAll(async (_c) => {});
 
   describe("user", () => {
@@ -59,11 +67,11 @@ describe("clients.test.ts", () => {
 
       const results = await builder.register({
         name: faker.company.name(),
-        did: builder.did.toString(),
+        did: builder.did.toString() as Did,
       });
 
-      const node153c = results["153c"]!;
-      const node2340 = results["2340"]!;
+      const node153c = results[nildbAId]!;
+      const node2340 = results[nildbBId]!;
 
       expect(node153c).toEqual("");
       expect(node2340).toEqual("");

@@ -1,12 +1,12 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 /**
  * Node information response.
  */
 export const ReadAboutNodeResponse = z.object({
-  started: z.string().datetime(),
+  started: z.iso.datetime(),
   build: z.object({
-    time: z.string().datetime(),
+    time: z.iso.datetime(),
     commit: z.string(),
     version: z.string(),
   }),
@@ -14,7 +14,7 @@ export const ReadAboutNodeResponse = z.object({
   url: z.string().url(),
   maintenance: z.object({
     active: z.boolean(),
-    started_at: z.string().datetime(),
+    started_at: z.iso.datetime(),
   }),
 });
 

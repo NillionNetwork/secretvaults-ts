@@ -1,10 +1,10 @@
 import type { ClusterKey, SecretKey } from "@nillion/blindfold";
 import {
   type Command,
-  type Did,
   InvocationBody,
   type Keypair,
   NilauthClient,
+  type Did as NucDid,
   NucTokenBuilder,
   type NucTokenEnvelope,
   PayerBuilder,
@@ -24,7 +24,7 @@ import {
   processPlaintextResponse,
 } from "./common/cluster";
 import { NucCmd } from "./common/nuc-cmd";
-import type { ByNodeName, Uuid } from "./common/types";
+import { type ByNodeName, Did, type Uuid } from "./common/types";
 import type {
   DeleteBuilderResponse,
   ReadBuilderProfileResponse,
@@ -155,7 +155,7 @@ export class SecretVaultBuilderClient {
     return this._options.keypair;
   }
 
-  get did(): Did {
+  get did(): NucDid {
     return this.keypair.toDid();
   }
 
@@ -377,7 +377,8 @@ export class SecretVaultBuilderClient {
         });
       }
 
-      const payload = nodePayloads[client.id.toString()];
+      const id = Did.parse(client.id.toString());
+      const payload = nodePayloads[id];
       return client.createStandardData(token, payload);
     });
   }
@@ -466,7 +467,8 @@ export class SecretVaultBuilderClient {
         command: NucCmd.nil.db.queries.read,
       });
 
-      const run = runs[client.name];
+      const id = Did.parse(client.id.toString());
+      const run = runs[id];
       return client.readQueryRunResults(token, run);
     });
   }
@@ -530,7 +532,8 @@ export class SecretVaultBuilderClient {
         .audience(client.id)
         .build(this.keypair.privateKey());
 
-      return client.updateData(token, nodePayloads[client.id.toString()]);
+      const id = Did.parse(client.id.toString());
+      return client.updateData(token, nodePayloads[id]);
     });
   }
 
@@ -583,7 +586,7 @@ export class SecretVaultBuilderClient {
   }
 
   private mintRootInvocation(options: {
-    audience: Did;
+    audience: NucDid;
     command: Command;
   }): string {
     return NucTokenBuilder.extending(this.rootToken)
