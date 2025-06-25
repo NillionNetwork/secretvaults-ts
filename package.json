@@ -18,7 +18,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@nillion/blindfold": "0.1.0-rc.0",
+    "@nillion/blindfold": "link:/Users/tim/projects/NillionNetwork/blindfold-ts",
     "@nillion/nuc": "0.1.0-rc.8",
     "debug": "^4.4.1",
     "uuid": "^11.1.0",

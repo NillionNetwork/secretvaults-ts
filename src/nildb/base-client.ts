@@ -1,4 +1,4 @@
-import { Did } from "@nillion/nuc";
+import { Did as NucDid } from "@nillion/nuc";
 import z from "zod";
 import { log } from "#/common/logger";
 import { NilDbEndpoint } from "#/common/paths";
@@ -32,8 +32,8 @@ export class NilDbBaseClient {
     return this.#options.about.public_key.slice(-4);
   }
 
-  get did(): Did {
-    return Did.fromHex(this.#options.about.public_key);
+  get id(): NucDid {
+    return NucDid.fromHex(this.#options.about.public_key);
   }
 
   /**

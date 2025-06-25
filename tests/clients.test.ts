@@ -77,7 +77,7 @@ describe("clients.test.ts", () => {
 
       expect(Object.keys(results)).toHaveLength(2);
       for (const [_node, profile] of pairs) {
-        expect(profile.data._id).toBe(builder.did.toString());
+        expect(profile._id).toBe(builder.did.toString());
       }
     });
   });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Did } from "#/dto/common";
 
 /**
  *
@@ -9,4 +10,4 @@ export type Uuid = z.infer<typeof Uuid>;
 /**
  *
  */
-export type ByNodeName<T> = Record<string, T>;
+export type ByNodeName<T> = Record<Did, T>;

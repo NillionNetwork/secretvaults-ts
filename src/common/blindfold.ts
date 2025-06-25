@@ -9,9 +9,7 @@ import {
 export type BlindfoldOperation = "store" | "match" | "sum";
 
 /**
- * Defines the configuration for creating or using a Blindfold encryption key.
- * This union uses the `never` type to ensure that properties for different
- * key generation strategies (e.g., `seed` vs. `useClusterKey`) are mutually exclusive.
+ * Defines valid configurations for creating or using a Blindfold encryption key.
  */
 export type BlindfoldFactoryConfig =
   //

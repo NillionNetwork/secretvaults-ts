@@ -9,10 +9,15 @@ import {
 } from "@nillion/nuc";
 import {
   type BlindfoldFactoryConfig,
-  conceal,
-  reveal,
   toBlindfoldKey,
-} from "./blindfold";
+} from "./common/blindfold";
+import {
+  executeOnCluster,
+  prepareConcealedRequest,
+  preparePlaintextRequest,
+  processConcealedObjectResponse,
+  processPlaintextResponse,
+} from "./common/cluster";
 import { NucCmd } from "./common/nuc-cmd";
 import { intoSecondsFromNow } from "./common/time";
 import type { ByNodeName } from "./common/types";
@@ -44,7 +49,13 @@ export type SecretVaultUserClientOptions = {
   key?: SecretKey | ClusterKey;
 };
 
+/**
+ * Client for users to manage owned-documents in SecretVaults.
+ */
 export class SecretVaultUserClient {
+  /**
+   * Creates and initializes a new SecretVaultUserClient instance.
+   */
   static async from(options: {
     keypair: Keypair;
     baseUrls: string[];
@@ -104,156 +115,150 @@ export class SecretVaultUserClient {
     return this._options.keypair;
   }
 
+  /**
+   * Retrieves information about each node in the cluster.
+   */
   readClusterInfo(): Promise<ByNodeName<ReadAboutNodeResponse>> {
-    return this.executeOnAllNodes((client) => client.aboutNode());
+    return executeOnCluster(this.nodes, (c) => c.aboutNode());
   }
 
-  readUserProfile(): Promise<ByNodeName<ReadUserProfileResponse>> {
-    return this.executeOnAllNodes(async (client) => {
+  /**
+   * Reads the user's profile information from the cluster.
+   */
+  async readUserProfile(): Promise<ReadUserProfileResponse> {
+    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintInvocation({
-        cmd: NucCmd.nil.db.users.root,
-        audience: client.did,
+        command: NucCmd.nil.db.users.root,
+        audience: client.id,
       });
-
       return client.getProfile(token);
     });
+
+    return processPlaintextResponse(resultsByNode);
   }
 
+  /**
+   * Creates one or more data documents owned by the user.
+   */
   async createData(
     delegation: string,
     body: CreateOwnedDataRequest,
   ): Promise<ByNodeName<CreateDataResponse>> {
-    let concealed = null;
-    const key = this._options.key;
-    if (key) {
-      concealed = await Promise.all(body.data.map((d) => conceal(key, d)));
-    }
+    const { key, clients } = this._options;
 
-    if (concealed && concealed.at(0)?.length !== this.nodes.length) {
-      throw new Error(
-        "Concealed data shares do not match the number of nodes.",
-      );
-    }
+    // 1. Prepare map of node-id to node-specific payload.
+    const nodePayloads = key
+      ? await prepareConcealedRequest({ key, clients, body })
+      : preparePlaintextRequest({ clients, body });
 
-    return this.executeOnAllNodes(async (client, index) => {
+    // 2. Execute on all nodes, looking up the payload by node id.
+    return executeOnCluster(this.nodes, (client) => {
       const envelop = NucTokenEnvelopeSchema.parse(delegation);
       const token = NucTokenBuilder.extending(envelop)
-        .audience(client.did)
+        .audience(client.id)
         .command(NucCmd.nil.db.data.create)
         .expiresAt(intoSecondsFromNow(60))
         .body(new InvocationBody({}))
         .build(this.keypair.privateKey());
 
-      const nodeBody: CreateOwnedDataRequest = { ...body };
-      if (concealed) {
-        nodeBody.data = concealed.map((s) => s[index]);
-      }
-
-      return client.createOwnedData(token, nodeBody);
+      const payload = nodePayloads[client.id.toString()];
+      return client.createOwnedData(token, payload);
     });
   }
 
-  listDataReferences(): Promise<ByNodeName<ListDataReferencesResponse>> {
-    return this.executeOnAllNodes(async (client) => {
+  /**
+   * Lists references to all data documents owned by the user.
+   */
+  async listDataReferences(): Promise<ListDataReferencesResponse> {
+    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintInvocation({
-        cmd: NucCmd.nil.db.users.read,
-        audience: client.did,
+        command: NucCmd.nil.db.users.read,
+        audience: client.id,
       });
-
       return client.listDataReferences(token);
     });
+
+    return processPlaintextResponse(resultsByNode);
   }
 
+  /**
+   * Reads a single data document, automatically revealing concealed values if a key is configured.
+   */
   async readData(params: ReadDataRequestParams): Promise<ReadDataResponse> {
-    // 1. Fetch the raw document share from all nodes.
-    const resultByNode = await this.executeOnAllNodes(async (client) => {
+    // 1. Fetch the raw data from all nodes.
+    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintInvocation({
-        cmd: NucCmd.nil.db.users.read,
-        audience: client.did,
+        command: NucCmd.nil.db.users.read,
+        audience: client.id,
       });
       return client.readData(token, params);
     });
 
     const { key } = this._options;
 
-    // 2. If no key is configured, return the response from the first node
-    if (!key) {
-      return Object.values(resultByNode).at(0)!;
+    // 2. If a key is configured, process the results for concealed values and then reveal them
+    if (key) {
+      const data = await processConcealedObjectResponse({
+        key,
+        resultsByNode,
+      });
+      return { data } as ReadDataResponse;
     }
 
-    // 3. If a key exists, collect the .data property from each node's response.
-    const shares = Object.values(resultByNode).map((r) => r.data);
-
-    // 4. Reveal (unify and decrypt any shares)
-    const revealedDoc = await reveal(key, shares);
-
-    // 5. Return the unified document
-    return { data: revealedDoc } as ReadDataResponse;
+    // 3. No key so process as plain text
+    return processPlaintextResponse(resultsByNode);
   }
 
+  /**
+   * Deletes a user-owned document from all nodes.
+   */
   deleteData(
     params: DeleteDocumentRequestParams,
   ): Promise<ByNodeName<DeleteDocumentResponse>> {
-    return this.executeOnAllNodes(async (client) => {
+    return executeOnCluster(this.nodes, (client) => {
       const token = this.mintInvocation({
-        cmd: NucCmd.nil.db.users.delete,
-        audience: client.did,
+        command: NucCmd.nil.db.users.delete,
+        audience: client.id,
       });
-
       return client.deleteData(token, params);
     });
   }
 
+  /**
+   * Grants a given Did access to a given user-owned document.
+   */
   grantAccess(
     body: GrantAccessToDataRequest,
   ): Promise<ByNodeName<GrantAccessToDataResponse>> {
-    return this.executeOnAllNodes(async (client) => {
+    return executeOnCluster(this.nodes, (client) => {
       const token = this.mintInvocation({
-        cmd: NucCmd.nil.db.users.update,
-        audience: client.did,
+        command: NucCmd.nil.db.users.update,
+        audience: client.id,
       });
-
       return client.grantAccess(token, body);
     });
   }
 
+  /**
+   * Revokes access for a given Did to the specified user-owned document.
+   */
   revokeAccess(
     body: RevokeAccessToDataRequest,
   ): Promise<ByNodeName<RevokeAccessToDataResponse>> {
-    return this.executeOnAllNodes(async (client) => {
+    return executeOnCluster(this.nodes, (client) => {
       const token = this.mintInvocation({
-        cmd: NucCmd.nil.db.users.update,
-        audience: client.did,
+        command: NucCmd.nil.db.users.update,
+        audience: client.id,
       });
-
       return client.revokeAccess(token, body);
     });
   }
 
-  private async executeOnAllNodes<T>(
-    operation: (client: NilDbUserClient, index: number) => Promise<T>,
-  ): Promise<Record<string, T>> {
-    const promises = this.nodes.map(async (client, index) => ({
-      name: client.name,
-      result: await operation(client, index),
-    }));
-
-    const results = await Promise.all(promises);
-
-    return results.reduce(
-      (acc, { name, result }) => {
-        acc[name] = result;
-        return acc;
-      },
-      {} as Record<string, T>,
-    );
-  }
-
-  private mintInvocation(options: { cmd: Command; audience: Did }): string {
+  private mintInvocation(options: { command: Command; audience: Did }): string {
     const builder = NucTokenBuilder.invocation({});
 
     return builder
-      .command(options.cmd)
+      .command(options.command)
       .subject(this.did)
       .audience(options.audience)
       .expiresAt(intoSecondsFromNow(60))
