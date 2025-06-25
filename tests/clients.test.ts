@@ -70,23 +70,18 @@ describe("clients.test.ts", () => {
         did: builder.did.toString() as Did,
       });
 
-      const node153c = results[nildbAId]!;
-      const node2340 = results[nildbBId]!;
+      const nildbA = results[nildbAId]!;
+      const nildbB = results[nildbBId]!;
 
-      expect(node153c).toEqual("");
-      expect(node2340).toEqual("");
+      expect(nildbA).toEqual("");
+      expect(nildbB).toEqual("");
     });
 
     test("read profile", async ({ c }) => {
       const { builder, expect } = c;
 
-      const results = await builder.readBuilderProfile();
-      const pairs = Object.entries(results);
-
-      expect(Object.keys(results)).toHaveLength(2);
-      for (const [_node, profile] of pairs) {
-        expect(profile._id).toBe(builder.did.toString());
-      }
+      const { data: profile } = await builder.readBuilderProfile();
+      expect(profile._id).toBe(builder.did.toString());
     });
   });
 });

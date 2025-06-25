@@ -214,7 +214,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     return executeOnCluster(this.nodes, (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
-        command: NucCmd.nil.db.collections.update,
+        command: NucCmd.nil.db.builders.update,
       });
 
       return client.updateProfile(token, body);
@@ -228,7 +228,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     return executeOnCluster(this.nodes, (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
-        command: NucCmd.nil.db.collections.delete,
+        command: NucCmd.nil.db.builders.delete,
       });
 
       return client.deleteBuilder(token);

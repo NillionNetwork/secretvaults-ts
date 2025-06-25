@@ -179,7 +179,7 @@ describe("owned-data.test.ts", () => {
   });
 
   test("user can delete their data", async ({ c }) => {
-    const { user, expect } = c;
+    const { user, expect, db } = c;
 
     // delete data record
     await user.deleteData({
@@ -187,8 +187,8 @@ describe("owned-data.test.ts", () => {
       document: record._id,
     });
 
-    // retrieve references to validate deletion
-    const results = await user.listDataReferences();
-    expect(results.data).toHaveLength(0);
+    // since it was the user's only record the user should have been removed from the db
+    const users = await db.db("nildb-1").collection("users").find({}).toArray();
+    expect(users).toHaveLength(0);
   });
 });

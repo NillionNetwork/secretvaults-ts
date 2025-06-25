@@ -137,4 +137,23 @@ describe("standard-data.test.ts", () => {
 
     expect(node153c.result).toEqual(node2340.result);
   });
+
+  test("builder can delete their account", async ({ c }) => {
+    const { builder, expect, db } = c;
+
+    const result = await builder.deleteBuilder();
+
+    expect(result[nildbAId]).toEqual("");
+    expect(result[nildbBId]).toEqual("");
+
+    const builders = await db
+      .db("nildb-1")
+      .collection("builders")
+      .find({})
+      .toArray();
+    expect(builders).toHaveLength(0);
+
+    const dataCollections = await db.db("nildb-1_data").collections();
+    expect(dataCollections).toHaveLength(0);
+  });
 });
