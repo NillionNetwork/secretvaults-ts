@@ -1,12 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { Keypair, NucTokenBuilder } from "@nillion/nuc";
 import { describe } from "vitest";
-import type { SecretVaultBuilderClient } from "#/builder-client";
+import { SecretVaultBuilderClient } from "#/builder";
 import { NucCmd } from "#/common/nuc-cmd";
 import { intoSecondsFromNow } from "#/common/time";
-import type { Uuid } from "#/common/types";
+import type { Did, Uuid } from "#/common/types";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
-import { createSecretVaultBuilderClient } from "#/factory";
 import collection from "./data/owned.collection.json";
 import query from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -28,11 +27,11 @@ describe("owned-data.test.ts", () => {
     const { builder, env, payer } = c;
 
     await builder.register({
-      did: builder.did.toString(),
+      did: builder.did.toString() as Did,
       name: faker.company.name(),
     });
 
-    otherBuilder = await createSecretVaultBuilderClient({
+    otherBuilder = await SecretVaultBuilderClient.from({
       keypair: Keypair.generate(),
       urls: env.urls,
     });
@@ -44,7 +43,7 @@ describe("owned-data.test.ts", () => {
     await otherBuilder.refreshRootToken();
 
     await otherBuilder.register({
-      did: otherBuilder.did.toString(),
+      did: otherBuilder.did.toString() as Did,
       name: faker.company.name(),
     });
   });
@@ -53,19 +52,15 @@ describe("owned-data.test.ts", () => {
   test("create owned collection", async ({ c }) => {
     const { builder, expect } = c;
 
-    const _results = await builder.createCollection(
-      collection as CreateCollectionRequest,
-    );
+    await builder.createCollection(collection as CreateCollectionRequest);
 
     // pause to avoid race condition
     await delay(1000);
 
-    const results = await builder.readBuilderProfile();
-    const pairs = Object.entries(results);
-    for (const [_node, result] of pairs) {
-      expect(result.data.collections).toHaveLength(1);
-      expect(result.data.collections.at(0)).toBe(collection._id);
-    }
+    // Assert against the single, unified response
+    const result = await builder.readBuilderProfile();
+    expect(result.data.collections).toHaveLength(1);
+    expect(result.data.collections.at(0)).toBe(collection._id);
   });
 
   test("user can upload data", async ({ c }) => {
@@ -78,9 +73,9 @@ describe("owned-data.test.ts", () => {
       .build(builder.keypair.privateKey());
 
     const results = await user.createData(delegation, {
-      owner: user.did.toString(),
+      owner: user.did.toString() as Did,
       acl: {
-        grantee: builder.did.toString(),
+        grantee: builder.did.toString() as Did,
         read: true,
         write: false,
         execute: true,
@@ -100,25 +95,21 @@ describe("owned-data.test.ts", () => {
   test("user can list data references", async ({ c }) => {
     const { user, expect } = c;
 
-    const results = await user.listDataReferences();
-    const node153c = results["153c"].data!;
-    const node2340 = results["2340"].data!;
-    expect(node153c).toEqual(node2340);
+    // Assert against the single, unified response
+    const result = await user.listDataReferences();
+    expect(result.data).toHaveLength(1);
+    expect(result.data.at(0)?.document).toBe(record._id);
   });
 
   test("user can retrieve their own data by id", async ({ c }) => {
     const { user, expect } = c;
 
-    const results = await user.readData({
+    // Assert against the single, unified response
+    const result = await user.readData({
       collection: collection._id,
       document: record._id,
     });
-
-    const node153c = results["153c"].data;
-    const node2340 = results["2340"].data;
-
-    expect(node153c.name).toEqual(record.name);
-    expect(node2340.name).toEqual(record.name);
+    expect(result.data.name).toEqual(record.name);
   });
 
   test("user can grant access to their data", async ({ c }) => {
@@ -129,7 +120,7 @@ describe("owned-data.test.ts", () => {
       collection: collection._id,
       document: record._id,
       acl: {
-        grantee: otherBuilder.did.toString(),
+        grantee: otherBuilder.did.toString() as Did,
         read: true,
         write: false,
         execute: false,
@@ -137,47 +128,21 @@ describe("owned-data.test.ts", () => {
     });
 
     // retrieve data record to check access was added
-    const dataResults = await user.readData({
+    const dataResult = await user.readData({
       collection: collection._id,
       document: record._id,
     });
 
-    const node153c = dataResults["153c"].data;
-    const node2340 = dataResults["2340"].data;
-
-    const otherBuilderAcl153c = node153c._acl.find(
-      (acl) => acl.grantee === otherBuilder.did.toString(),
-    );
-    const otherBuilderAcl2340 = node2340._acl.find(
+    // Assert against the single, unified response's ACL
+    const otherBuilderAcl = dataResult.data._acl.find(
       (acl) => acl.grantee === otherBuilder.did.toString(),
     );
 
-    expect(otherBuilderAcl153c).toBeDefined();
-    expect(otherBuilderAcl153c!.read).toBe(true);
-    expect(otherBuilderAcl153c!.write).toBe(false);
-    expect(otherBuilderAcl153c!.execute).toBe(false);
-
-    expect(otherBuilderAcl2340).toBeDefined();
-    expect(otherBuilderAcl2340!.read).toBe(true);
-    expect(otherBuilderAcl2340!.write).toBe(false);
-    expect(otherBuilderAcl2340!.execute).toBe(false);
+    expect(otherBuilderAcl).toBeDefined();
+    expect(otherBuilderAcl!.read).toBe(true);
+    expect(otherBuilderAcl!.write).toBe(false);
+    expect(otherBuilderAcl!.execute).toBe(false);
   });
-
-  // test("other builder can access user data with delegation", async ({ c }) => {
-  //   const { builder, user, expect } = c;
-  //
-  //   const delegation = NucTokenBuilder.extending(builder.rootToken)
-  //     .command(NucCmd.nil.db.data.read)
-  //     .audience(otherBuilder.did)
-  //     .expiresAt(intoSecondsFromNow(60))
-  //     .build(builder.keypair.privateKey());
-  //
-  //   const delegationEnvelope = NucTokenEnvelopeSchema.parse(delegation);
-
-  // const invocation = NucTokenBuilder
-  //   .invocation(delegationEnvelope)
-  //   .build(otherBuilder);
-  // });
 
   test("user can revoke access to their data", async ({ c }) => {
     const { user, expect } = c;
@@ -187,7 +152,7 @@ describe("owned-data.test.ts", () => {
       collection: collection._id,
       document: record._id,
       acl: {
-        grantee: otherBuilder.did.toString(),
+        grantee: otherBuilder.did.toString() as Did,
         read: true,
         write: true,
         execute: false,
@@ -196,33 +161,25 @@ describe("owned-data.test.ts", () => {
 
     // revoke access to otherBuilder
     await user.revokeAccess({
-      grantee: otherBuilder.did.toString(),
+      grantee: otherBuilder.did.toString() as Did,
       collection: collection._id,
       document: record._id,
     });
 
     // retrieve data record to check access was removed
-    const results = await user.readData({
+    const result = await user.readData({
       collection: collection._id,
       document: record._id,
     });
 
-    const node153c = results["153c"].data;
-    const node2340 = results["2340"].data;
-
-    const otherBuilderAcl153c = node153c._acl.find(
+    const otherBuilderAcl = result.data._acl.find(
       (acl) => acl.grantee === otherBuilder.did.toString(),
     );
-    const otherBuilderAcl2340 = node2340._acl.find(
-      (acl) => acl.grantee === otherBuilder.did.toString(),
-    );
-
-    expect(otherBuilderAcl153c).toBeUndefined();
-    expect(otherBuilderAcl2340).toBeUndefined();
+    expect(otherBuilderAcl).toBeUndefined();
   });
 
   test("user can delete their data", async ({ c }) => {
-    const { user, expect } = c;
+    const { user, expect, db } = c;
 
     // delete data record
     await user.deleteData({
@@ -230,9 +187,8 @@ describe("owned-data.test.ts", () => {
       document: record._id,
     });
 
-    // retrieve references to validate deletion
-    const results = await user.listDataReferences();
-    expect(results["153c"].data).toHaveLength(0);
-    expect(results["2340"].data).toHaveLength(0);
+    // since it was the user's only record the user should have been removed from the db
+    const users = await db.db("nildb-1").collection("users").find({}).toArray();
+    expect(users).toHaveLength(0);
   });
 });

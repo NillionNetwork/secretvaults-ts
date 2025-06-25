@@ -1,5 +1,6 @@
-import z from "zod";
-import { ApiSuccessResponse, Did } from "./common";
+import { z } from "zod/v4";
+import { Did } from "#/common/types";
+import { ApiSuccessResponse } from "./common";
 
 /**
  * Access control list entry.
@@ -17,20 +18,18 @@ export type AclDto = z.infer<typeof AclDto>;
  */
 const UserProfileData = z.object({
   _id: Did,
-  _created: z.string().datetime(),
-  _updated: z.string().datetime(),
+  _created: z.iso.datetime(),
+  _updated: z.iso.datetime(),
   log: z.array(
-    z
-      .object({
-        col: z.string().uuid(),
-        op: z.string(),
-      })
-      .passthrough(),
+    z.looseObject({
+      col: z.uuid(),
+      op: z.string(),
+    }),
   ),
   data: z.array(
     z.object({
-      collection: z.string().uuid(),
-      id: z.string().uuid(),
+      collection: z.uuid(),
+      id: z.uuid(),
     }),
   ),
 });
@@ -45,21 +44,20 @@ export type ReadUserProfileResponse = z.infer<typeof ReadUserProfileResponse>;
  * Data read request parameters.
  */
 export const ReadDataRequestParams = z.object({
-  collection: z.string().uuid(),
-  document: z.string().uuid(),
+  collection: z.uuid(),
+  document: z.uuid(),
 });
 export type ReadDataRequestParams = z.infer<typeof ReadDataRequestParams>;
 
 const OwnedDataDto = z
-  .object({
-    _id: z.string().uuid(),
-    _created: z.string().datetime(),
-    _updated: z.string().datetime(),
+  // Allow all keys through since each collection will follow a different schema
+  .looseObject({
+    _id: z.uuid(),
+    _created: z.iso.datetime(),
+    _updated: z.iso.datetime(),
     _owner: Did,
     _acl: z.array(AclDto),
-  })
-  // Allow all keys through since each collection will follow a different schema
-  .passthrough();
+  });
 
 export const ReadDataResponse = ApiSuccessResponse(OwnedDataDto);
 export type ReadDataResponse = z.infer<typeof ReadDataResponse>;
@@ -69,8 +67,8 @@ export type ReadDataResponse = z.infer<typeof ReadDataResponse>;
  */
 const DataDocumentReference = z.object({
   builder: Did,
-  collection: z.string().uuid(),
-  document: z.string().uuid(),
+  collection: z.uuid(),
+  document: z.uuid(),
 });
 
 /**
@@ -88,8 +86,8 @@ export type ListDataReferencesResponse = z.infer<
  * Data ACL read parameters.
  */
 export const ReadDataAclRequestParams = z.object({
-  collection: z.string().uuid(),
-  document: z.string().uuid(),
+  collection: z.uuid(),
+  document: z.uuid(),
 });
 export type ReadDataAclRequestParams = z.infer<typeof ReadDataAclRequestParams>;
 
@@ -103,8 +101,8 @@ export type ReadDataAccessResponse = z.infer<typeof ReadDataAccessResponse>;
  * Grant data access request.
  */
 export const GrantAccessToDataRequest = z.object({
-  collection: z.string().uuid(),
-  document: z.string().uuid(),
+  collection: z.uuid(),
+  document: z.uuid(),
   acl: AclDto,
 });
 export type GrantAccessToDataRequest = z.infer<typeof GrantAccessToDataRequest>;
@@ -122,8 +120,8 @@ export type GrantAccessToDataResponse = z.infer<
  */
 export const RevokeAccessToDataRequest = z.object({
   grantee: Did,
-  collection: z.string().uuid(),
-  document: z.string().uuid(),
+  collection: z.uuid(),
+  document: z.uuid(),
 });
 export type RevokeAccessToDataRequest = z.infer<
   typeof RevokeAccessToDataRequest
@@ -141,8 +139,8 @@ export type RevokeAccessToDataResponse = z.infer<
  * Document deletion parameters.
  */
 export const DeleteDocumentRequestParams = z.object({
-  collection: z.string().uuid(),
-  document: z.string().uuid(),
+  collection: z.uuid(),
+  document: z.uuid(),
 });
 export type DeleteDocumentRequestParams = z.infer<
   typeof DeleteDocumentRequestParams
@@ -158,8 +156,8 @@ export type DeleteDocumentResponse = z.infer<typeof DeleteDocumentResponse>;
  * Update user data request.
  */
 export const UpdateUserDataRequest = z.object({
-  document: z.string().uuid(),
-  collection: z.string().uuid(),
+  document: z.uuid(),
+  collection: z.uuid(),
   update: z.record(z.string(), z.unknown()),
 });
 export type UpdateUserDataRequest = z.infer<typeof UpdateUserDataRequest>;

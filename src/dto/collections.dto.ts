@@ -1,5 +1,6 @@
-import { z } from "zod";
-import { ApiSuccessResponse, Did } from "./common";
+import { z } from "zod/v4";
+import { Did } from "#/common/types";
+import { ApiSuccessResponse } from "./common";
 
 /**
  * Collection document data.
@@ -26,7 +27,7 @@ export type ListCollectionsResponse = z.infer<typeof ListCollectionsResponse>;
  * Collection index creation request.
  */
 export const CreateCollectionIndexRequest = z.object({
-  collection: z.string().uuid(),
+  collection: z.uuid(),
   name: z.string().min(4),
   keys: z.array(
     z
@@ -55,7 +56,7 @@ export type CreateCollectionIndexResponse = z.infer<
  * Drop collection index parameters.
  */
 export const DropCollectionIndexParams = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(4).max(50),
 });
 
@@ -75,7 +76,7 @@ export type DropCollectionIndexResponse = z.infer<
  * Collection creation request.
  */
 export const CreateCollectionRequest = z.object({
-  _id: z.string().uuid(),
+  _id: z.uuid(),
   type: z.union([z.literal("standard"), z.literal("owned")]),
   name: z.string().min(1),
   schema: z.record(z.string(), z.unknown()),
@@ -92,7 +93,7 @@ export type CreateCollectionResponse = z.infer<typeof CreateCollectionResponse>;
  * Collection deletion parameters.
  */
 export const DeleteCollectionRequestParams = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 export type DeleteCollectionRequestParams = z.infer<
   typeof DeleteCollectionRequestParams
@@ -108,7 +109,7 @@ export type DeleteCollectionResponse = z.infer<typeof DeleteCollectionResponse>;
  * Collection metadata read parameters.
  */
 export const ReadCollectionMetadataRequestParams = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 export type ReadCollectionMetadataRequestParams = z.infer<
   typeof ReadCollectionMetadataRequestParams
@@ -128,11 +129,11 @@ export const CollectionIndexDto = z.object({
  * Collection metadata data.
  */
 export const CollectionMetadataDto = z.object({
-  _id: z.string().uuid(),
+  _id: z.uuid(),
   count: z.number(),
   size: z.number(),
-  first_write: z.string().datetime(),
-  last_write: z.string().datetime(),
+  first_write: z.iso.datetime(),
+  last_write: z.iso.datetime(),
   indexes: z.array(CollectionIndexDto),
 });
 

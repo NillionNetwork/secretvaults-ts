@@ -1,7 +1,7 @@
-# secretvault-ts
+# secretvaults-ts
 
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/NillionNetwork/secretvault-ts/.github%2Fworkflows%2Fci.yaml)
-![GitHub package.json version](https://img.shields.io/github/package-json/v/NillionNetwork/secretvault-ts)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/NillionNetwork/secretvaults-ts/.github%2Fworkflows%2Fci.yaml)
+![GitHub package.json version](https://img.shields.io/github/package-json/v/NillionNetwork/secretvaults-ts)
 
 ## Getting Started
 
@@ -19,7 +19,7 @@ We welcome contributions! Here's how you can get involved:
 
 ## Getting Help
 
-- [Create an Issue](https://github.com/NillionNetwork/nildb/issues/new/choose)
+- [Create an Issue](https://github.com/NillionNetwork/secretvaults-ts/issues/new/choose)
 - [Join our Discord](https://discord.com/invite/nillionnetwork)
 
 ## License

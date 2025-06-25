@@ -1,7 +1,7 @@
 import * as crypto from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
-import type { ByNodeName, Uuid } from "#/common/types";
+import type { ByNodeName, Did, Uuid } from "#/common/types";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import collection from "./data/standard.collection.json";
 import query from "./data/standard.query.json";
@@ -19,33 +19,33 @@ describe("standard-data.test.ts", () => {
 
   let data: Array<{ _id: string; name: string }>;
 
+  let nildbAId: Did;
+  let nildbBId: Did;
+
   beforeAll(async (c) => {
     const { builder } = c;
 
     await builder.register({
-      did: builder.did.toString(),
+      did: builder.did.toString() as Did,
       name: faker.company.name(),
     });
+
+    nildbAId = builder.nodes.at(0)?.id.toString()! as Did;
+    nildbBId = builder.nodes.at(1)?.id.toString()! as Did;
   });
   afterAll(async (_c) => {});
 
   test("create a standard collection", async ({ c }) => {
     const { builder, expect } = c;
 
-    const _results = await builder.createCollection(
-      collection as CreateCollectionRequest,
-    );
+    await builder.createCollection(collection as CreateCollectionRequest);
 
     // pause to avoid race condition
     await delay(1000);
 
-    const results = await builder.readBuilderProfile();
-    const pairs = Object.entries(results);
-
-    for (const [_name, result] of pairs) {
-      expect(result.data.collections).toHaveLength(1);
-      expect(result.data.collections.at(0)).toBe(collection._id);
-    }
+    const result = await builder.readBuilderProfile();
+    expect(result.data.collections).toHaveLength(1);
+    expect(result.data.collections.at(0)).toBe(collection._id);
   });
 
   test("upload data", async ({ c }) => {
@@ -76,14 +76,9 @@ describe("standard-data.test.ts", () => {
   test("read builder profile", async ({ c }) => {
     const { builder, expect } = c;
 
-    const results = await builder.readBuilderProfile();
-    const node153c = results["153c"].data;
-    const node2340 = results["2340"].data;
-
-    expect(node153c.collections).toHaveLength(1);
-    expect(node2340.collections).toHaveLength(1);
-    expect(node153c.collections.at(0)).toBe(collection._id);
-    expect(node2340.collections.at(0)).toBe(collection._id);
+    const result = await builder.readBuilderProfile();
+    expect(result.data.collections).toHaveLength(1);
+    expect(result.data.collections.at(0)).toBe(collection._id);
   });
 
   test("update builder profile", async ({ c }) => {
@@ -92,69 +87,73 @@ describe("standard-data.test.ts", () => {
     const updatedName = faker.company.name();
     await builder.updateBuilderProfile({ name: updatedName });
 
-    const results = await builder.readBuilderProfile();
-    const node153c = results["153c"].data;
-    const node2340 = results["2340"].data;
-
-    expect(node153c.name).toBe(updatedName);
-    expect(node2340.name).toBe(updatedName);
+    const result = await builder.readBuilderProfile();
+    expect(result.data.name).toBe(updatedName);
   });
 
   test("read collection metadata", async ({ c }) => {
     const { builder, expect } = c;
 
-    const results = await builder.readCollection(collection._id as Uuid);
-    const node153c = results["153c"].data;
-    const node2340 = results["2340"].data;
-
-    expect(node153c._id).toBe(collection._id);
-    expect(node2340._id).toBe(collection._id);
-    expect(node153c.count).toBeGreaterThanOrEqual(0);
-    expect(node2340.count).toBeGreaterThanOrEqual(0);
+    // The method now returns a single, unified response.
+    const result = await builder.readCollection(collection._id as Uuid);
+    expect(result.data._id).toBe(collection._id);
+    expect(result.data.count).toBeGreaterThanOrEqual(0);
   });
 
   test("tail data", async ({ c }) => {
     const { builder, expect } = c;
 
     const results = await builder.tailData(collection._id as Uuid, 5);
-    const node153c = results["153c"].data;
-    const node2340 = results["2340"].data;
-
-    expect(node153c).toHaveLength(1);
-    expect(node2340).toHaveLength(1);
-    expect(node153c.at(0)?.name).toBe("tim");
-    expect(node2340.at(0)?.name).toBe("tim");
+    expect(results.data).toHaveLength(1);
+    expect(results.data.at(0)?.name).toBe("tim");
   });
 
   test("create and run query", async ({ c }) => {
     const { builder, expect } = c;
 
-    // First create the query
     query.collection = collection._id;
     const createResults = await builder.createQuery(query);
 
     expect(Object.keys(createResults)).toHaveLength(2);
-    // createQuery returns a string response, so we just verify the call succeeds
-    expect(createResults["153c"]).toBeDefined();
-    expect(createResults["2340"]).toBeDefined();
+    expect(createResults[nildbAId]).toBeDefined();
+    expect(createResults[nildbBId]).toBeDefined();
 
-    // Run the query
+    // runQuery still returns ByNodeName, so this part is correct.
     const runResults = await builder.runQuery({
       _id: query._id,
       variables: { name: "tim" },
     });
     const runs = Object.entries(runResults).reduce(
-      (acc, [name, value]) => {
-        acc[name] = value.data as Uuid;
+      (acc, [id, value]) => {
+        acc[id as Did] = value.data as Uuid;
         return acc;
       },
       {} as ByNodeName<Uuid>,
     );
 
     const results = await waitForQueryRun(c, runs);
-    const node153c = results["153c"].data;
-    const node2340 = results["2340"].data;
+    const node153c = results[nildbAId].data;
+    const node2340 = results[nildbBId].data;
 
     expect(node153c.result).toEqual(node2340.result);
+  });
+
+  test("builder can delete their account", async ({ c }) => {
+    const { builder, expect, db } = c;
+
+    const result = await builder.deleteBuilder();
+
+    expect(result[nildbAId]).toEqual("");
+    expect(result[nildbBId]).toEqual("");
+
+    const builders = await db
+      .db("nildb-1")
+      .collection("builders")
+      .find({})
+      .toArray();
+    expect(builders).toHaveLength(0);
+
+    const dataCollections = await db.db("nildb-1_data").collections();
+    expect(dataCollections).toHaveLength(0);
   });
 });
