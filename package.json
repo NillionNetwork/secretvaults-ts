@@ -18,21 +18,21 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@nillion/blindfold": "link:/Users/tim/projects/NillionNetwork/blindfold-ts",
-    "@nillion/nuc": "0.1.0-rc.8",
+    "@nillion/blindfold": "0.1.0-rc.1",
+    "@nillion/nuc": "0.1.0-rc.10",
     "debug": "^4.4.1",
     "uuid": "^11.1.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
-    "@biomejs/biome": "2.0.0",
+    "@biomejs/biome": "2.0.5",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@commitlint/types": "^19.8.1",
     "@faker-js/faker": "^9.8.0",
     "@types/debug": "^4.1.12",
-    "@types/node": "^24.0.3",
+    "@types/node": "^24.0.4",
     "@types/semver": "^7.7.0",
     "@vitest/coverage-v8": "3.2.4",
     "docker-compose": "^1.2.0",
@@ -46,7 +46,7 @@
     "tsx": "^4.20.3",
     "type-fest": "^4.41.0",
     "typescript": "^5.8.3",
-    "vite": "^6.3.5",
+    "vite": "^7.0.0",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"
   },
