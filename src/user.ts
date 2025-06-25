@@ -1,4 +1,3 @@
-import type { ClusterKey, SecretKey } from "@nillion/blindfold";
 import {
   type Command,
   InvocationBody,
@@ -7,6 +6,7 @@ import {
   NucTokenBuilder,
   NucTokenEnvelopeSchema,
 } from "@nillion/nuc";
+import { SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
 import {
   type BlindfoldFactoryConfig,
   toBlindfoldKey,
@@ -25,7 +25,6 @@ import type {
   CreateDataResponse,
   CreateOwnedDataRequest,
 } from "./dto/data.dto";
-import type { ReadAboutNodeResponse } from "./dto/system.dto";
 import type {
   DeleteDocumentRequestParams,
   DeleteDocumentResponse,
@@ -43,16 +42,12 @@ import {
   type NilDbUserClient,
 } from "./nildb/user-client";
 
-export type SecretVaultUserClientOptions = {
-  keypair: Keypair;
-  clients: NilDbUserClient[];
-  key?: SecretKey | ClusterKey;
-};
+export type SecretVaultUserOptions = SecretVaultBaseOptions<NilDbUserClient>;
 
 /**
  * Client for users to manage owned-documents in SecretVaults.
  */
-export class SecretVaultUserClient {
+export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient> {
   /**
    * Creates and initializes a new SecretVaultUserClient instance.
    */
@@ -95,31 +90,6 @@ export class SecretVaultUserClient {
       keypair,
       key,
     });
-  }
-
-  _options: SecretVaultUserClientOptions;
-
-  constructor(options: SecretVaultUserClientOptions) {
-    this._options = options;
-  }
-
-  get did(): NucDid {
-    return this._options.keypair.toDid();
-  }
-
-  get nodes(): NilDbUserClient[] {
-    return this._options.clients;
-  }
-
-  get keypair(): Keypair {
-    return this._options.keypair;
-  }
-
-  /**
-   * Retrieves information about each node in the cluster.
-   */
-  readClusterInfo(): Promise<ByNodeName<ReadAboutNodeResponse>> {
-    return executeOnCluster(this.nodes, (c) => c.aboutNode());
   }
 
   /**

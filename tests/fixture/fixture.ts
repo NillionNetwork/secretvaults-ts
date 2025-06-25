@@ -2,8 +2,8 @@ import { Keypair, NilauthClient, PayerBuilder } from "@nillion/nuc";
 import { MongoClient } from "mongodb";
 import type { Logger } from "pino";
 import * as vitest from "vitest";
-import { SecretVaultBuilderClient } from "#/builder-client";
-import { SecretVaultUserClient } from "#/user-client";
+import { SecretVaultBuilderClient } from "#/builder";
+import { SecretVaultUserClient } from "#/user";
 import { createTestLogger } from "./utils";
 
 /**

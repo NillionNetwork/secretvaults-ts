@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { Keypair, NucTokenBuilder } from "@nillion/nuc";
 import { describe } from "vitest";
-import { SecretVaultBuilderClient } from "#/builder-client";
+import { SecretVaultBuilderClient } from "#/builder";
 import { NucCmd } from "#/common/nuc-cmd";
 import { intoSecondsFromNow } from "#/common/time";
 import type { Did, Uuid } from "#/common/types";

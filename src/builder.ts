@@ -1,4 +1,3 @@
-import type { ClusterKey, SecretKey } from "@nillion/blindfold";
 import {
   type Command,
   InvocationBody,
@@ -10,6 +9,7 @@ import {
   PayerBuilder,
   type SubscriptionStatusResponse,
 } from "@nillion/nuc";
+import { SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
 import { intoSecondsFromNow } from "#/common/time";
 import {
   type BlindfoldFactoryConfig,
@@ -66,7 +66,6 @@ import type {
   RunQueryRequest,
   RunQueryResponse,
 } from "./dto/queries.dto";
-import type { ReadAboutNodeResponse } from "./dto/system.dto";
 import {
   createNilDbBuilderClient,
   type NilDbBuilderClient,
@@ -75,17 +74,15 @@ import {
 /**
  *
  */
-export type SecretVaultBuilderOptions = {
-  nilauthClient: NilauthClient;
-  clients: NilDbBuilderClient[];
-  keypair: Keypair;
-  key?: SecretKey | ClusterKey;
-};
+export type SecretVaultBuilderOptions =
+  SecretVaultBaseOptions<NilDbBuilderClient> & {
+    nilauthClient: NilauthClient;
+  };
 
 /**
  * Client for builders to manage their SecretVaults with automatic handling of concealed data if configured.
  */
-export class SecretVaultBuilderClient {
+export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilderClient> {
   /**
    * Creates and initializes a new SecretVaultBuilderClient instance.
    */
@@ -144,23 +141,14 @@ export class SecretVaultBuilderClient {
     });
   }
 
-  _options: SecretVaultBuilderOptions;
   #rootToken: NucTokenEnvelope | null = null;
+  #nilauthClient: NilauthClient;
 
   constructor(options: SecretVaultBuilderOptions) {
-    this._options = options;
-  }
-
-  get keypair(): Keypair {
-    return this._options.keypair;
-  }
-
-  get did(): NucDid {
-    return this.keypair.toDid();
-  }
-
-  get nodes(): NilDbBuilderClient[] {
-    return this._options.clients;
+    // Pass the common options up to the base class.
+    super(options);
+    // Handle the specific property here.
+    this.#nilauthClient = options.nilauthClient;
   }
 
   get rootToken(): NucTokenEnvelope {
@@ -174,7 +162,7 @@ export class SecretVaultBuilderClient {
    * Fetches a new root NUC token from the configured nilAuth server.
    */
   async refreshRootToken(): Promise<void> {
-    const { token } = await this._options.nilauthClient.requestToken(
+    const { token } = await this.#nilauthClient.requestToken(
       this._options.keypair,
       "nildb",
     );
@@ -186,17 +174,10 @@ export class SecretVaultBuilderClient {
    * Checks subscription status by the builder's Did.
    */
   subscriptionStatus(): Promise<SubscriptionStatusResponse> {
-    return this._options.nilauthClient.subscriptionStatus(
+    return this.#nilauthClient.subscriptionStatus(
       this.keypair.publicKey("hex"),
       "nildb",
     );
-  }
-
-  /**
-   * Retrieves information about each node in the cluster.
-   */
-  readClusterInfo(): Promise<ByNodeName<ReadAboutNodeResponse>> {
-    return executeOnCluster(this.nodes, (c) => c.aboutNode());
   }
 
   /**
@@ -241,7 +222,7 @@ export class SecretVaultBuilderClient {
   }
 
   /**
-   * Deletes the builder's profile from all nodes.
+   * Deletes the builder and associated resources from all nodes.
    */
   deleteBuilder(): Promise<ByNodeName<DeleteBuilderResponse>> {
     return executeOnCluster(this.nodes, (client) => {
