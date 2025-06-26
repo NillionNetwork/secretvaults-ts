@@ -18,11 +18,13 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@nillion/blindfold": "0.1.0-rc.1",
-    "@nillion/nuc": "0.1.0-rc.10",
     "debug": "^4.4.1",
     "uuid": "^11.1.0",
     "zod": "^3.25.67"
+  },
+  "peerDependencies": {
+    "@nillion/blindfold": "0.1.0-rc.1",
+    "@nillion/nuc": "0.1.0-rc.10"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",

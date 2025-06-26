@@ -68,14 +68,6 @@ export const ReadQueryResponse = ApiSuccessResponse(QueryDocumentResponse);
 export type ReadQueryResponse = z.infer<typeof ReadQueryResponse>;
 
 /**
- * Query ID path parameters.
- */
-export const ByIdRequestParams = z.object({
-  id: z.uuid(),
-});
-export type ByIdRequestParams = z.infer<typeof ByIdRequestParams>;
-
-/**
  * Query deletion request.
  */
 export const DeleteQueryRequest = z.object({
