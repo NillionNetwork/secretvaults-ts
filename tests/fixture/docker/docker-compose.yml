@@ -33,7 +33,7 @@ services:
       caddy respond --listen :80 --body '{"nillion":{"usd":1}}' --header "Content-Type: application/json" 
 
   nildb-1:
-    image: public.ecr.aws/k5d9x2g2/nildb-api:1.0.0
+    image: public.ecr.aws/k5d9x2g2/nildb-api:1.0.1
     depends_on:
       - mongo
     ports:
@@ -51,7 +51,7 @@ services:
       - APP_PORT=8080
 
   nildb-2:
-    image: public.ecr.aws/k5d9x2g2/nildb-api:1.0.0
+    image: public.ecr.aws/k5d9x2g2/nildb-api:1.0.1
     depends_on:
       - mongo
     ports:
