@@ -20,14 +20,14 @@ const UserProfileData = z.object({
   _id: Did,
   _created: z.iso.datetime(),
   _updated: z.iso.datetime(),
-  logs: z
-    .array(
-      z.looseObject({
-        col: z.uuid(),
-        op: z.string(),
-      }),
-    )
-    .optional(), // Workaround for https://github.com/NillionNetwork/nildb/issues/280
+  logs: z.array(
+    z.looseObject({
+      op: z.string(),
+      collection: z.uuid(),
+      // present when op is "auth"
+      acl: AclDto.optional(),
+    }),
+  ),
   data: z.array(
     z.object({
       collection: z.uuid(),

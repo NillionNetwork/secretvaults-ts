@@ -178,6 +178,14 @@ describe("owned-data.test.ts", () => {
     expect(otherBuilderAcl).toBeUndefined();
   });
 
+  test("user can read their profile", async ({ c }) => {
+    const { user, expect } = c;
+    const result = await user.readProfile();
+
+    expect(result.data._id).toBe(user.did.toString());
+    expect(result.data.logs).toHaveLength(5);
+  });
+
   test("user can delete their data", async ({ c }) => {
     const { user, expect, db } = c;
 
