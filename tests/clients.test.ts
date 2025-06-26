@@ -80,7 +80,7 @@ describe("clients.test.ts", () => {
     test("read profile", async ({ c }) => {
       const { builder, expect } = c;
 
-      const { data: profile } = await builder.readBuilderProfile();
+      const { data: profile } = await builder.readProfile();
       expect(profile._id).toBe(builder.did.toString());
     });
   });

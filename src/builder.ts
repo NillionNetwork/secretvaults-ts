@@ -192,14 +192,14 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Reads the builder's profile from the cluster.
    */
-  async readBuilderProfile(): Promise<ReadBuilderProfileResponse> {
+  async readProfile(): Promise<ReadBuilderProfileResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.builders.read,
       });
 
-      return client.getProfile(token);
+      return client.readProfile(token);
     });
 
     return processPlaintextResponse(resultsByNode);

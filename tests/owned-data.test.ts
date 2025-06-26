@@ -58,7 +58,7 @@ describe("owned-data.test.ts", () => {
     await delay(1000);
 
     // Assert against the single, unified response
-    const result = await builder.readBuilderProfile();
+    const result = await builder.readProfile();
     expect(result.data.collections).toHaveLength(1);
     expect(result.data.collections.at(0)).toBe(collection._id);
   });

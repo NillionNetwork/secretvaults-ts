@@ -95,13 +95,13 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Reads the user's profile information from the cluster.
    */
-  async readUserProfile(): Promise<ReadUserProfileResponse> {
+  async readProfile(): Promise<ReadUserProfileResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintInvocation({
         command: NucCmd.nil.db.users.root,
         audience: client.id,
       });
-      return client.getProfile(token);
+      return client.readProfile(token);
     });
 
     return processPlaintextResponse(resultsByNode);
