@@ -11,6 +11,7 @@ import {
 } from "@nillion/nuc";
 import { SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
 import { intoSecondsFromNow } from "#/common/time";
+import { Log } from "#/logger";
 import {
   type BlindfoldFactoryConfig,
   conceal,
@@ -97,6 +98,15 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   }): Promise<SecretVaultBuilderClient> {
     const { urls, keypair, blindfold } = options;
 
+    Log.debug(
+      {
+        did: keypair.toDid().toString(),
+        dbCount: urls.dbs.length,
+        blindfold: !!blindfold,
+      },
+      "Creating SecretVaultBuilderClient",
+    );
+
     const payerBuilder = await new PayerBuilder()
       .keypair(keypair)
       .chainUrl(urls.chain)
@@ -109,51 +119,62 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     );
     const clients = await Promise.all(clientPromises);
 
-    if (!blindfold) {
+    let client: SecretVaultBuilderClient;
+    if (blindfold) {
+      if ("key" in blindfold) {
+        // User provided a key
+        client = new SecretVaultBuilderClient({
+          clients,
+          keypair,
+          key: blindfold.key,
+          nilauthClient,
+        });
+      } else {
+        // Create a new key
+        const key = await toBlindfoldKey({
+          ...blindfold,
+          clusterSize: clients.length,
+        });
+
+        client = new SecretVaultBuilderClient({
+          clients,
+          keypair,
+          key,
+          nilauthClient,
+        });
+      }
+    } else {
       // No encryption
-      return new SecretVaultBuilderClient({
+      client = new SecretVaultBuilderClient({
         clients,
         keypair,
         nilauthClient,
       });
     }
 
-    if ("key" in blindfold) {
-      // Use a pre-existing key
-      return new SecretVaultBuilderClient({
-        clients,
-        keypair,
-        nilauthClient,
-        key: blindfold.key,
-      });
-    }
+    Log.info(
+      {
+        id: keypair.toDid().toString().slice(-8),
+        nodes: clients.length,
+        encryption: client._options.key?.constructor.name ?? "none",
+      },
+      "SecretVaultBuilderClient created",
+    );
 
-    const key = await toBlindfoldKey({
-      ...blindfold,
-      clusterSize: clients.length,
-    });
-
-    return new SecretVaultBuilderClient({
-      clients,
-      keypair,
-      nilauthClient,
-      key,
-    });
+    return client;
   }
 
   #rootToken: NucTokenEnvelope | null = null;
   #nilauthClient: NilauthClient;
 
   constructor(options: SecretVaultBuilderOptions) {
-    // Pass the common options up to the base class.
     super(options);
-    // Handle the specific property here.
     this.#nilauthClient = options.nilauthClient;
   }
 
   get rootToken(): NucTokenEnvelope {
     if (!this.#rootToken) {
-      throw new Error("Call `refreshRootToken` before trying to use it");
+      throw new Error("`refreshRootToken` must be called first");
     }
     return this.#rootToken;
   }
@@ -162,12 +183,14 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    * Fetches a new root NUC token from the configured nilAuth server.
    */
   async refreshRootToken(): Promise<void> {
+    Log.debug("Refreshing root token");
     const { token } = await this.#nilauthClient.requestToken(
       this._options.keypair,
       "nildb",
     );
 
     this.#rootToken = token;
+    Log.info({ builder: this.id }, "Root token refreshed");
   }
 
   /**
@@ -183,10 +206,12 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Registers the builder with all nodes in the cluster.
    */
-  register(
+  async register(
     body: RegisterBuilderRequest,
   ): Promise<ByNodeName<RegisterBuilderResponse>> {
-    return executeOnCluster(this.nodes, (c) => c.register(body));
+    const result = await executeOnCluster(this.nodes, (c) => c.register(body));
+    Log.info({ builder: this.id }, "Builder registered");
+    return result;
   }
 
   /**
@@ -202,16 +227,18 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.readProfile(token);
     });
 
-    return processPlaintextResponse(resultsByNode);
+    const result = processPlaintextResponse(resultsByNode);
+    Log.info({ builder: this.id }, "Builder profile read");
+    return result;
   }
 
   /**
    * Updates the builder's profile on all nodes.
    */
-  updateBuilderProfile(
+  async updateBuilderProfile(
     body: UpdateBuilderProfileRequest,
   ): Promise<ByNodeName<UpdateBuilderProfileResponse>> {
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.builders.update,
@@ -219,13 +246,19 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.updateProfile(token, body);
     });
+
+    Log.info(
+      { builder: this.id, updateFields: Object.keys(body) },
+      "Builder profile updated",
+    );
+    return result;
   }
 
   /**
    * Deletes the builder and associated resources from all nodes.
    */
-  deleteBuilder(): Promise<ByNodeName<DeleteBuilderResponse>> {
-    return executeOnCluster(this.nodes, (client) => {
+  async deleteBuilder(): Promise<ByNodeName<DeleteBuilderResponse>> {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.builders.delete,
@@ -233,15 +266,18 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.deleteBuilder(token);
     });
+
+    Log.info({ builder: this.id }, "Builder deleted");
+    return result;
   }
 
   /**
    * Creates a new collection on all nodes.
    */
-  createCollection(
+  async createCollection(
     body: CreateCollectionRequest,
   ): Promise<ByNodeName<CreateCollectionResponse>> {
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.collections.create,
@@ -249,6 +285,9 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.createCollection(token, body);
     });
+
+    Log.info({ builder: this.id, collection: body.name }, "Collection created");
+    return result;
   }
 
   /**
@@ -264,7 +303,17 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.readCollections(token);
     });
 
-    return processPlaintextResponse(resultsByNode);
+    const result = processPlaintextResponse(resultsByNode);
+
+    Log.info(
+      {
+        builder: this.id,
+        count: result.data?.length || 0,
+      },
+      "Collections read",
+    );
+
+    return result;
   }
 
   /**
@@ -282,16 +331,19 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.readCollection(token, collection);
     });
 
-    return processPlaintextResponse(resultsByNode);
+    const result = processPlaintextResponse(resultsByNode);
+
+    Log.info({ builder: this.id, collection }, "Collection metadata read");
+    return result;
   }
 
   /**
    * Deletes a collection its data from all nodes.
    */
-  deleteCollection(
+  async deleteCollection(
     collection: Uuid,
   ): Promise<ByNodeName<DeleteCollectionResponse>> {
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.collections.delete,
@@ -299,16 +351,19 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.deleteCollection(token, collection);
     });
+
+    Log.info({ builder: this.id, collection }, "Collection deleted");
+    return result;
   }
 
   /**
    * Creates a new index on a collection.
    */
-  createCollectionIndex(
+  async createCollectionIndex(
     collection: Uuid,
     body: CreateCollectionIndexRequest,
   ): Promise<ByNodeName<CreateCollectionIndexResponse>> {
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.collections.update,
@@ -316,16 +371,27 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.createCollectionIndex(token, collection, body);
     });
+
+    Log.info(
+      {
+        builder: this.id,
+        collection,
+        name: body.name,
+      },
+      "Collection index created",
+    );
+
+    return result;
   }
 
   /**
    * Drops an index from a collection.
    */
-  dropCollectionIndex(
+  async dropCollectionIndex(
     collection: Uuid,
     index: Name,
   ): Promise<ByNodeName<DropCollectionIndexResponse>> {
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.collections.update,
@@ -333,6 +399,17 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.dropCollectionIndex(token, collection, index);
     });
+
+    Log.info(
+      {
+        builder: this.id,
+        collection,
+        index,
+      },
+      "Collection index dropped",
+    );
+
+    return result;
   }
 
   /**
@@ -349,7 +426,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       ? await prepareConcealedRequest({ key, clients, body })
       : preparePlaintextRequest({ clients, body });
 
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       let token = delegation;
       if (!token) {
         token = this.mintRootInvocation({
@@ -362,13 +439,25 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       const payload = nodePayloads[id];
       return client.createStandardData(token, payload);
     });
+
+    Log.info(
+      {
+        collection: body.collection,
+        count: body.data.length,
+        builder: this.id,
+        isConcealed: !!key,
+      },
+      "Data created",
+    );
+
+    return result;
   }
 
   /**
    * Retrieves a list of all saved queries.
    */
-  getQueries(): Promise<ByNodeName<ReadQueriesResponse>> {
-    return executeOnCluster(this.nodes, async (client) => {
+  async getQueries(): Promise<ByNodeName<ReadQueriesResponse>> {
+    const result = await executeOnCluster(this.nodes, async (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.queries.read,
@@ -376,13 +465,16 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.getQueries(token);
     });
+
+    Log.info({ builder: this.id }, "Queries read");
+    return result;
   }
 
   /**
    * Retrieves a single saved query by its id.
    */
-  getQuery(query: Uuid): Promise<ByNodeName<ReadQueryResponse>> {
-    return executeOnCluster(this.nodes, async (client) => {
+  async getQuery(query: Uuid): Promise<ByNodeName<ReadQueryResponse>> {
+    const result = await executeOnCluster(this.nodes, async (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.queries.read,
@@ -390,15 +482,18 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.getQuery(token, query);
     });
+
+    Log.info({ query, builder: this.id }, "Query read");
+    return result;
   }
 
   /**
    * Creates a new saved query on all nodes.
    */
-  createQuery(
+  async createQuery(
     body: CreateQueryRequest,
   ): Promise<ByNodeName<CreateQueryResponse>> {
-    return executeOnCluster(this.nodes, async (client) => {
+    const result = await executeOnCluster(this.nodes, async (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.queries.create,
@@ -406,13 +501,25 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.createQuery(token, body);
     });
+
+    Log.info(
+      {
+        builder: this.id,
+        name: body.name,
+        id: body._id,
+        collection: body.collection,
+      },
+      "Created query",
+    );
+
+    return result;
   }
 
   /**
    * Deletes a saved query from all nodes.
    */
-  deleteQuery(query: Uuid): Promise<ByNodeName<DeleteQueryResponse>> {
-    return executeOnCluster(this.nodes, async (client) => {
+  async deleteQuery(query: Uuid): Promise<ByNodeName<DeleteQueryResponse>> {
+    const result = await executeOnCluster(this.nodes, async (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.queries.delete,
@@ -420,13 +527,16 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.deleteQuery(token, query);
     });
+
+    Log.info({ builder: this.id, query }, "Query deleted");
+    return result;
   }
 
   /**
    * Starts a query execution job.
    */
-  runQuery(body: RunQueryRequest): Promise<ByNodeName<RunQueryResponse>> {
-    return executeOnCluster(this.nodes, async (client) => {
+  async runQuery(body: RunQueryRequest): Promise<ByNodeName<RunQueryResponse>> {
+    const result = await executeOnCluster(this.nodes, async (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.queries.execute,
@@ -434,6 +544,16 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.runQuery(token, body);
     });
+
+    Log.info(
+      {
+        builder: this.id,
+        query: body._id,
+        run: Object.values(result)[0]?.data,
+      },
+      "Started query run",
+    );
+    return result;
   }
 
   /**
@@ -468,12 +588,25 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     });
 
     const { key } = this._options;
+    let result: FindDataResponse;
 
     if (key) {
       const data = await processConcealedListResponse({ key, resultsByNode });
-      return { data };
+      result = { data };
+    } else {
+      result = processPlaintextResponse(resultsByNode);
     }
-    return processPlaintextResponse(resultsByNode);
+
+    Log.info(
+      {
+        builder: this.id,
+        collection: body.collection,
+        count: result.data?.length || 0,
+      },
+      "Data found",
+    );
+
+    return result;
   }
 
   /**
@@ -507,7 +640,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       nodePayloads = preparePlaintextRequest({ clients, body });
     }
 
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const token = NucTokenBuilder.extending(this.rootToken)
         .command(NucCmd.nil.db.data.update)
         .audience(client.id)
@@ -516,13 +649,26 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       const id = Did.parse(client.id.toString());
       return client.updateData(token, nodePayloads[id]);
     });
+
+    Log.info(
+      {
+        builder: this.id,
+        collection: body.collection,
+        filter: body.filter,
+      },
+      "Data updated",
+    );
+
+    return result;
   }
 
   /**
    * Deletes data from a collection based on a filter.
    */
-  deleteData(body: DeleteDataRequest): Promise<ByNodeName<DeleteDataResponse>> {
-    return executeOnCluster(this.nodes, async (client) => {
+  async deleteData(
+    body: DeleteDataRequest,
+  ): Promise<ByNodeName<DeleteDataResponse>> {
+    const result = await executeOnCluster(this.nodes, async (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.data.delete,
@@ -530,13 +676,24 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.deleteData(token, body);
     });
+
+    Log.info(
+      {
+        builder: this.id,
+        collection: body.collection,
+        filter: body.filter,
+      },
+      "Data deleted",
+    );
+
+    return result;
   }
 
   /**
    * Deletes all data from a collection.
    */
-  flushData(collection: Uuid): Promise<ByNodeName<FlushDataResponse>> {
-    return executeOnCluster(this.nodes, async (client) => {
+  async flushData(collection: Uuid): Promise<ByNodeName<FlushDataResponse>> {
+    const result = await executeOnCluster(this.nodes, async (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.data.delete,
@@ -544,12 +701,17 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
       return client.flushData(token, collection);
     });
+
+    Log.info({ collection }, "Flushed data");
+    return result;
   }
 
   /**
    * Reads the last N documents from a collection, revealing concealed values if a key is configured.
    */
   async tailData(collection: Uuid, limit = 10): Promise<TailDataResponse> {
+    Log.debug({ collection, limit }, "Tailing data");
+
     const resultsByNode = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintRootInvocation({
         audience: client.id,
@@ -559,11 +721,18 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     });
 
     const { key } = this._options;
+    let result: TailDataResponse;
+
     if (key) {
       const data = await processConcealedListResponse({ key, resultsByNode });
-      return { data };
+      result = { data };
+    } else {
+      result = processPlaintextResponse(resultsByNode);
     }
-    return processPlaintextResponse(resultsByNode);
+
+    Log.info({ collection, count: result.data?.length || 0 }, "Data tailed");
+
+    return result;
   }
 
   private mintRootInvocation(options: {

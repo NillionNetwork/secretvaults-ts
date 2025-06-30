@@ -5,6 +5,7 @@ import {
   SecretKey,
   unify,
 } from "@nillion/blindfold";
+import { Log } from "#/logger";
 
 export type BlindfoldOperation = "store" | "match" | "sum";
 
@@ -34,30 +35,42 @@ export type BlindfoldFactoryConfig =
     }
   | {
       operation: "sum";
-      threshold?: number;
       seed?: Uint8Array | Buffer | string;
       useClusterKey?: never; // Explicitly forbid useClusterKey
+      threshold?: number;
     }
   //
   // --- Scenario 3: Generate a ClusterKey (disallows seed) ---
   //
   | {
       operation: "store" | "match";
-      useClusterKey: true;
       seed?: never; // Explicitly forbid seed
+      useClusterKey: true;
       threshold?: never;
     }
   | {
       operation: "sum";
-      threshold?: number;
-      useClusterKey: true;
       seed?: never; // Explicitly forbid seed
+      useClusterKey: true;
+      threshold?: number;
     };
 
 export async function toBlindfoldKey(
   options: BlindfoldFactoryConfig & { clusterSize: number },
 ): Promise<SecretKey | ClusterKey> {
+  Log.debug(
+    {
+      hasExistingKey: "key" in options,
+      operation: "operation" in options ? options.operation : "existing-key",
+      clusterSize: options.clusterSize,
+      useClusterKey: "useClusterKey" in options ? options.useClusterKey : false,
+      hasSeed: "seed" in options && options.seed !== undefined,
+    },
+    "Creating blindfold key",
+  );
+
   if ("key" in options) {
+    Log.debug({ keyType: options.key.constructor.name }, "Using existing key");
     return options.key;
   }
 
@@ -75,7 +88,8 @@ export async function toBlindfoldKey(
   const useSeed = "seed" in options && options.seed !== undefined;
   const isClusterKey = useClusterKey || (!useSeed && clusterSize > 1);
 
-  return isClusterKey
+  const keyType = isClusterKey ? "ClusterKey" : "SecretKey";
+  const key = isClusterKey
     ? await ClusterKey.generate(cluster, operations, threshold)
     : await SecretKey.generate(
         cluster,
@@ -83,6 +97,17 @@ export async function toBlindfoldKey(
         threshold,
         "seed" in options ? options.seed : undefined,
       );
+
+  Log.debug(
+    {
+      keyType,
+      operation,
+      threshold,
+      clusterSize,
+    },
+    "Key generated",
+  );
+  return key;
 }
 
 /**
@@ -127,6 +152,13 @@ export async function conceal(
   key: SecretKey | ClusterKey,
   data: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
+  Log.debug(
+    {
+      keyType: key.constructor.name,
+      dataKeys: Object.keys(data),
+    },
+    "Starting data concealment",
+  );
   const encryptDeep = async (value: unknown): Promise<unknown> => {
     // Base case: if it's not an object or is null, return
     if (typeof value !== "object" || value === null) {
@@ -163,7 +195,14 @@ export async function conceal(
   const encryptedData = (await encryptDeep(data)) as Record<string, unknown>;
 
   // splits data into one record per-node where each node gets a secret share
-  return allot(encryptedData) as Record<string, unknown>[];
+  const shares = allot(encryptedData) as Record<string, unknown>[];
+
+  Log.debug(
+    { type: key.constructor.name, shares: shares.length },
+    "Data concealed",
+  );
+
+  return shares;
 }
 
 /**
@@ -193,5 +232,14 @@ export async function reveal(
   shares: Record<string, unknown>[],
 ): Promise<Record<string, unknown>> {
   const unified = await unify(key, shares);
+
+  Log.debug(
+    {
+      type: key.constructor.name,
+      keys: Object.keys(unified as Record<string, unknown>),
+    },
+    "Revealed data",
+  );
+
   return unified as Record<string, unknown>;
 }

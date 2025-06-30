@@ -7,6 +7,7 @@ import {
   NucTokenEnvelopeSchema,
 } from "@nillion/nuc";
 import { SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
+import { Log } from "#/logger";
 import {
   type BlindfoldFactoryConfig,
   toBlindfoldKey,
@@ -59,37 +60,49 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     const { baseUrls, keypair, blindfold } = options;
 
     // Create clients
-    const clientPromises = baseUrls.map((baseUrl) =>
-      createNilDbUserClient(baseUrl),
-    );
+    const clientPromises = baseUrls.map((u) => createNilDbUserClient(u));
     const clients = await Promise.all(clientPromises);
 
-    if (!blindfold) {
+    let client: SecretVaultUserClient;
+    if (blindfold) {
+      if ("key" in blindfold) {
+        // User provided a key
+        client = new SecretVaultUserClient({
+          clients,
+          keypair,
+          key: blindfold.key,
+        });
+      } else {
+        // Create a new key
+        const key = await toBlindfoldKey({
+          ...blindfold,
+          clusterSize: clients.length,
+        });
+
+        client = new SecretVaultUserClient({
+          clients,
+          keypair,
+          key,
+        });
+      }
+    } else {
       // No encryption
-      return new SecretVaultUserClient({
+      client = new SecretVaultUserClient({
         clients,
         keypair,
       });
     }
 
-    if ("key" in blindfold) {
-      return new SecretVaultUserClient({
-        clients,
-        keypair,
-        key: blindfold.key,
-      });
-    }
+    Log.info(
+      {
+        did: keypair.toDid().toString(),
+        nodes: clients.length,
+        encryption: client._options.key?.constructor.name ?? "none",
+      },
+      "SecretVaultUserClient created",
+    );
 
-    const key = await toBlindfoldKey({
-      ...blindfold,
-      clusterSize: clients.length,
-    });
-
-    return new SecretVaultUserClient({
-      clients,
-      keypair,
-      key,
-    });
+    return client;
   }
 
   /**
@@ -104,7 +117,9 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       return client.readProfile(token);
     });
 
-    return processPlaintextResponse(resultsByNode);
+    const result = processPlaintextResponse(resultsByNode);
+    Log.info({ user: this.id }, "User profile read");
+    return result;
   }
 
   /**
@@ -122,7 +137,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       : preparePlaintextRequest({ clients, body });
 
     // 2. Execute on all nodes, looking up the payload by node id.
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const envelop = NucTokenEnvelopeSchema.parse(delegation);
       const token = NucTokenBuilder.extending(envelop)
         .audience(client.id)
@@ -135,6 +150,18 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       const payload = nodePayloads[id];
       return client.createOwnedData(token, payload);
     });
+
+    Log.info(
+      {
+        user: this.id,
+        collection: body.collection,
+        documents: body.data.length,
+        concealed: !!key,
+      },
+      "User data created",
+    );
+
+    return result;
   }
 
   /**
@@ -149,7 +176,14 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       return client.listDataReferences(token);
     });
 
-    return processPlaintextResponse(resultsByNode);
+    const result = processPlaintextResponse(resultsByNode);
+
+    Log.info(
+      { user: this.id, count: result.data?.length || 0 },
+      "User data references listed",
+    );
+
+    return result;
   }
 
   /**
@@ -166,6 +200,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     });
 
     const { key } = this._options;
+    let result: ReadDataResponse;
 
     // 2. If a key is configured, process the results for concealed values and then reveal them
     if (key) {
@@ -173,56 +208,102 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
         key,
         resultsByNode,
       });
-      return { data } as ReadDataResponse;
+      result = { data } as ReadDataResponse;
+    } else {
+      // 3. No key so process as plain text
+      result = processPlaintextResponse(resultsByNode);
     }
 
-    // 3. No key so process as plain text
-    return processPlaintextResponse(resultsByNode);
+    Log.info(
+      {
+        user: this.id,
+        collection: params.collection,
+        document: params.document,
+      },
+      "User data read",
+    );
+
+    return result;
   }
 
   /**
    * Deletes a user-owned document from all nodes.
    */
-  deleteData(
+  async deleteData(
     params: DeleteDocumentRequestParams,
   ): Promise<ByNodeName<DeleteDocumentResponse>> {
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintInvocation({
         command: NucCmd.nil.db.users.delete,
         audience: client.id,
       });
       return client.deleteData(token, params);
     });
+
+    Log.info(
+      {
+        user: this.id,
+        collection: params.collection,
+        document: params.document,
+      },
+      "User data deleted",
+    );
+
+    return result;
   }
 
   /**
    * Grants a given Did access to a given user-owned document.
    */
-  grantAccess(
+  async grantAccess(
     body: GrantAccessToDataRequest,
   ): Promise<ByNodeName<GrantAccessToDataResponse>> {
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintInvocation({
         command: NucCmd.nil.db.users.update,
         audience: client.id,
       });
       return client.grantAccess(token, body);
     });
+
+    Log.info(
+      {
+        user: this.id,
+        collection: body.collection,
+        document: body.document,
+        grantee: body.acl.grantee,
+      },
+      "Data access granted",
+    );
+
+    return result;
   }
 
   /**
    * Revokes access for a given Did to the specified user-owned document.
    */
-  revokeAccess(
+  async revokeAccess(
     body: RevokeAccessToDataRequest,
   ): Promise<ByNodeName<RevokeAccessToDataResponse>> {
-    return executeOnCluster(this.nodes, (client) => {
+    const result = await executeOnCluster(this.nodes, (client) => {
       const token = this.mintInvocation({
         command: NucCmd.nil.db.users.update,
         audience: client.id,
       });
       return client.revokeAccess(token, body);
     });
+
+    Log.info(
+      {
+        user: this.id,
+        collection: body.collection,
+        document: body.document,
+        revokee: body.grantee,
+      },
+      "Data access revoked",
+    );
+
+    return result;
   }
 
   private mintInvocation(options: {

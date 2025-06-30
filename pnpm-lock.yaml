@@ -17,6 +17,9 @@ importers:
       debug:
         specifier: ^4.4.1
         version: 4.4.1
+      pino:
+        specifier: ^9.7.0
+        version: 9.7.0
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -66,9 +69,6 @@ importers:
       mongodb:
         specifier: ^6.17.0
         version: 6.17.0
-      pino:
-        specifier: ^9.7.0
-        version: 9.7.0
       pino-pretty:
         specifier: ^13.0.0
         version: 13.0.0
