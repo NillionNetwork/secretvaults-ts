@@ -76,11 +76,10 @@ export async function toBlindfoldKey(
 
   const { operation, clusterSize } = options;
 
-  const operations = {
-    store: operation === "store",
-    match: operation === "match",
-    sum: operation === "sum",
+  const op = {
+    [operation]: true,
   };
+
   const threshold = "threshold" in options ? options.threshold : undefined;
   const cluster = { nodes: new Array(clusterSize).fill({}) };
 
@@ -88,22 +87,22 @@ export async function toBlindfoldKey(
   const useSeed = "seed" in options && options.seed !== undefined;
   const isClusterKey = useClusterKey || (!useSeed && clusterSize > 1);
 
-  const keyType = isClusterKey ? "ClusterKey" : "SecretKey";
+  const type = isClusterKey ? "ClusterKey" : "SecretKey";
   const key = isClusterKey
-    ? await ClusterKey.generate(cluster, operations, threshold)
+    ? await ClusterKey.generate(cluster, op, threshold)
     : await SecretKey.generate(
         cluster,
-        operations,
+        op,
         threshold,
         "seed" in options ? options.seed : undefined,
       );
 
   Log.debug(
     {
-      keyType,
+      key: type,
       operation,
       threshold,
-      clusterSize,
+      nodes: clusterSize,
     },
     "Key generated",
   );

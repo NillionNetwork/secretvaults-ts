@@ -62,7 +62,7 @@ function getInitialLogLevel(): LogLevel {
     }
   }
 
-  console.log("NILLION_LOG_LEVEL=", level);
+  console.log(`NILLION_LOG_LEVEL=${level}`);
   return level;
 }
 
