@@ -43,7 +43,7 @@ describe("standard-data.test.ts", () => {
     // pause to avoid race condition
     await delay(1000);
 
-    const result = await builder.readBuilderProfile();
+    const result = await builder.readProfile();
     expect(result.data.collections).toHaveLength(1);
     expect(result.data.collections.at(0)).toBe(collection._id);
   });
@@ -76,7 +76,7 @@ describe("standard-data.test.ts", () => {
   test("read builder profile", async ({ c }) => {
     const { builder, expect } = c;
 
-    const result = await builder.readBuilderProfile();
+    const result = await builder.readProfile();
     expect(result.data.collections).toHaveLength(1);
     expect(result.data.collections.at(0)).toBe(collection._id);
   });
@@ -87,7 +87,7 @@ describe("standard-data.test.ts", () => {
     const updatedName = faker.company.name();
     await builder.updateBuilderProfile({ name: updatedName });
 
-    const result = await builder.readBuilderProfile();
+    const result = await builder.readProfile();
     expect(result.data.name).toBe(updatedName);
   });
 

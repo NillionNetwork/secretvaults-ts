@@ -4,7 +4,7 @@ import type { TestProject } from "vitest/node";
 const MAX_RETRIES = 300;
 const composeOptions = {
   cwd: "./tests/fixture/docker",
-  composeOptions: [["--project-name", "secretvault-tests"]],
+  composeOptions: [["--project-name", "secretvaults-tests"]],
 };
 
 export async function setup(_project: TestProject) {

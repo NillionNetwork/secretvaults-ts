@@ -58,7 +58,7 @@ describe("owned-data.test.ts", () => {
     await delay(1000);
 
     // Assert against the single, unified response
-    const result = await builder.readBuilderProfile();
+    const result = await builder.readProfile();
     expect(result.data.collections).toHaveLength(1);
     expect(result.data.collections.at(0)).toBe(collection._id);
   });
@@ -176,6 +176,14 @@ describe("owned-data.test.ts", () => {
       (acl) => acl.grantee === otherBuilder.did.toString(),
     );
     expect(otherBuilderAcl).toBeUndefined();
+  });
+
+  test("user can read their profile", async ({ c }) => {
+    const { user, expect } = c;
+    const result = await user.readProfile();
+
+    expect(result.data._id).toBe(user.did.toString());
+    expect(result.data.logs).toHaveLength(5);
   });
 
   test("user can delete their data", async ({ c }) => {

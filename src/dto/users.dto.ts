@@ -20,10 +20,12 @@ const UserProfileData = z.object({
   _id: Did,
   _created: z.iso.datetime(),
   _updated: z.iso.datetime(),
-  log: z.array(
+  logs: z.array(
     z.looseObject({
-      col: z.uuid(),
       op: z.string(),
+      collection: z.uuid(),
+      // present when op is "auth"
+      acl: AclDto.optional(),
     }),
   ),
   data: z.array(

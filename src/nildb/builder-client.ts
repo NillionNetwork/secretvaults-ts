@@ -78,7 +78,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Retrieves the authenticated builder's profile information.
    */
-  getProfile(token: string): Promise<ReadBuilderProfileResponse> {
+  readProfile(token: string): Promise<ReadBuilderProfileResponse> {
     return this.request({
       path: NilDbEndpoint.v1.builders.me,
       token,

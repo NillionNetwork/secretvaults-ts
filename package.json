@@ -1,6 +1,6 @@
 {
   "name": "@nillion/secretvaults",
-  "version": "0.1.0-rc.1",
+  "version": "0.1.0-rc.5",
   "license": "MIT",
   "description": "A client for interacting with nillion's nildb blind module",
   "type": "module",
@@ -18,28 +18,30 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@nillion/blindfold": "0.1.0-rc.1",
-    "@nillion/nuc": "0.1.0-rc.10",
     "debug": "^4.4.1",
+    "pino": "^9.7.0",
     "uuid": "^11.1.0",
     "zod": "^3.25.67"
   },
+  "peerDependencies": {
+    "@nillion/blindfold": "0.1.0-rc.1",
+    "@nillion/nuc": "0.1.0-rc.10"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
-    "@biomejs/biome": "2.0.5",
+    "@biomejs/biome": "2.0.6",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@commitlint/types": "^19.8.1",
     "@faker-js/faker": "^9.8.0",
     "@types/debug": "^4.1.12",
-    "@types/node": "^24.0.4",
+    "@types/node": "^24.0.7",
     "@types/semver": "^7.7.0",
     "@vitest/coverage-v8": "3.2.4",
     "docker-compose": "^1.2.0",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.0.0",
     "lefthook": "^1.11.14",
     "mongodb": "^6.17.0",
-    "pino": "^9.7.0",
     "pino-pretty": "^13.0.0",
     "semver": "^7.7.2",
     "tsup": "^8.5.0",

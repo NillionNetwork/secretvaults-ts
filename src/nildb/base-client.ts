@@ -1,11 +1,11 @@
 import { Did as NucDid } from "@nillion/nuc";
 import { z } from "zod/v4";
-import { log } from "#/common/logger";
 import { NilDbEndpoint } from "#/common/paths";
 import {
   NodeHealthCheckResponse,
   ReadAboutNodeResponse,
 } from "#/dto/system.dto";
+import { Log } from "#/logger";
 
 export const NilDbBaseClientOptions = z.object({
   about: ReadAboutNodeResponse,
@@ -87,10 +87,11 @@ export class NilDbBaseClient {
     });
 
     const contentType = response.headers.get("content-type") ?? "";
+    const status = response.status;
 
     if (contentType.includes("application/json")) {
       const json = await response.json();
-      console.log("Response body: ", json);
+      Log.debug({ path, json, status }, "Response was application/json");
 
       if (!response.ok) {
         this.handleErrorResponse(response, method, path, json);
@@ -101,7 +102,7 @@ export class NilDbBaseClient {
 
     if (contentType.includes("text/plain")) {
       const text = await response.text();
-      console.log("Response text: ", text);
+      Log.debug({ path, text, status }, "Response was text/plain");
 
       if (!response.ok) {
         this.handleErrorResponse(response, method, path, text);
@@ -110,7 +111,7 @@ export class NilDbBaseClient {
       return responseSchema.parse(text);
     }
 
-    log("Response has no body");
+    Log.debug({ path, status }, "Response had no body");
     if (!response.ok) {
       this.handleErrorResponse(response, method, path, null);
     }

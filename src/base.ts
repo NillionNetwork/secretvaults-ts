@@ -3,6 +3,7 @@ import type { Keypair, Did as NucDid } from "@nillion/nuc";
 import { executeOnCluster } from "./common/cluster";
 import type { ByNodeName } from "./common/types";
 import type { ReadAboutNodeResponse } from "./dto/system.dto";
+import { Log } from "./logger";
 import type { NilDbBaseClient } from "./nildb/base-client";
 
 /**
@@ -22,6 +23,10 @@ export class SecretVaultBaseClient<TClient extends NilDbBaseClient> {
 
   constructor(options: SecretVaultBaseOptions<TClient>) {
     this._options = options;
+  }
+
+  get id(): string {
+    return this.did.toString();
   }
 
   /**
@@ -48,7 +53,9 @@ export class SecretVaultBaseClient<TClient extends NilDbBaseClient> {
   /**
    * Retrieves information about each node in the cluster.
    */
-  readClusterInfo(): Promise<ByNodeName<ReadAboutNodeResponse>> {
-    return executeOnCluster(this.nodes, (c) => c.aboutNode());
+  async readClusterInfo(): Promise<ByNodeName<ReadAboutNodeResponse>> {
+    const result = await executeOnCluster(this.nodes, (c) => c.aboutNode());
+    Log.info({ nodes: Object.keys(result).length }, "Cluster info retrieved");
+    return result;
   }
 }
