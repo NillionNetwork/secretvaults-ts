@@ -3,13 +3,12 @@ import { Keypair, NucTokenBuilder } from "@nillion/nuc";
 import { describe } from "vitest";
 import { SecretVaultBuilderClient } from "#/builder";
 import { NucCmd } from "#/common/nuc-cmd";
-import { intoSecondsFromNow } from "#/common/time";
 import type { Did, Uuid } from "#/common/types";
+import { intoSecondsFromNow, pause } from "#/common/utils";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import collection from "./data/owned.collection.json";
 import query from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";
-import { delay } from "./fixture/utils";
 
 describe("owned-data.test.ts", () => {
   const { test, beforeAll, afterAll } = createFixture();
@@ -55,7 +54,7 @@ describe("owned-data.test.ts", () => {
     await builder.createCollection(collection as CreateCollectionRequest);
 
     // pause to avoid race condition
-    await delay(1000);
+    await pause(1000);
 
     // Assert against the single, unified response
     const result = await builder.readProfile();

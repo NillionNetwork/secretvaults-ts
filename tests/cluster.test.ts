@@ -45,9 +45,12 @@ describe("executeOnCluster", () => {
       return "success";
     };
 
-    await expect(executeOnCluster(clients, operation)).rejects.toThrow(
-      "Node 2 failed",
-    );
+    try {
+      await executeOnCluster(clients, operation);
+      expect.fail("Should have thrown");
+    } catch (failures: any) {
+      expect(failures.at(0)?.error?.message).toBe("Node 2 failed");
+    }
   });
 });
 

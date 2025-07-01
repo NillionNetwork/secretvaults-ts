@@ -13,23 +13,51 @@ export async function executeOnCluster<Client extends NilDbBaseClient, T>(
 ): Promise<ByNodeName<T>> {
   Log.debug({ nodes: nodes.length }, "Executing cluster operation");
 
-  const promises = nodes.map(async (client, index) => {
-    const node = client.id.toString();
+  const promises = nodes.map(async (client, index): Promise<[Did, T]> => {
+    const node = client.id.toString() as Did;
     Log.debug({ node, index }, "Starting node operation");
 
     try {
       const result = await operation(client, index);
-      Log.debug({ node, index }, "Node operation completed");
-      return [node, result] as const;
+      return [node, result];
     } catch (error) {
-      Log.error({ node, index, error }, "Node operation failed");
-      throw error;
+      throw [node, error];
     }
   });
 
-  const results = await Promise.all(promises);
-  Log.debug({ nodes: results.length }, "Cluster operation completed");
-  return Object.fromEntries(results);
+  const results = await Promise.allSettled(promises);
+
+  const successes: [Did, T][] = [];
+  const failures: { node: Did; error: unknown }[] = [];
+
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      successes.push(result.value);
+    } else {
+      const [node, error] = result.reason;
+      const cause = error.cause;
+
+      const flattened = {
+        message: error?.message ?? "",
+        body: cause?.body ?? undefined,
+        status: cause?.status ?? undefined,
+      };
+
+      failures.push({
+        node,
+        error: flattened,
+      });
+    }
+  }
+
+  if (failures.length > 0) {
+    Log.error({ successes, failures }, "Cluster operation failed");
+    throw failures;
+  }
+
+  Log.debug("Cluster operation succeeded");
+
+  return Object.fromEntries(successes);
 }
 
 /**

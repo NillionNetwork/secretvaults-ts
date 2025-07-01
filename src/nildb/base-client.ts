@@ -1,6 +1,7 @@
 import { Did as NucDid } from "@nillion/nuc";
 import { z } from "zod/v4";
 import { NilDbEndpoint } from "#/common/paths";
+import { isError, pause } from "#/common/utils";
 import {
   NodeHealthCheckResponse,
   ReadAboutNodeResponse,
@@ -56,6 +57,88 @@ export class NilDbBaseClient {
   }
 
   /**
+   * Determines if an error is retryable based on its type
+   */
+  private isRetryableError(error: unknown): boolean {
+    if (isError(error)) {
+      const retryableNames = [
+        "NetworkError",
+        "AbortError",
+        "TimeoutError",
+        "ERR_NETWORK",
+        "ECONNREFUSED",
+        "ECONNRESET",
+        "ETIMEDOUT",
+        "ENOTFOUND",
+        "EAI_AGAIN",
+      ];
+
+      if (retryableNames.includes(error.name)) {
+        return true;
+      }
+
+      // Check error message for network-related issues
+      const message = error.message.toLowerCase();
+      if (
+        message.includes("network") ||
+        message.includes("fetch failed") ||
+        message.includes("connection refused") ||
+        message.includes("timeout")
+      ) {
+        return true;
+      }
+
+      // Check if it's a response error with retryable status
+      const cause = (error as { cause?: { status?: number } }).cause;
+      if (cause?.status) {
+        // Retry on 5xx errors and specific 4xx errors
+        return (
+          cause.status >= 500 || cause.status === 429 || cause.status === 408
+        );
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Executes a fetch request with retry logic for network failures
+   */
+  private async fetchWithRetry(
+    endpoint: string,
+    fetchOptions: RequestInit,
+    context: string,
+    maxRetries = 5,
+  ): Promise<Response> {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await fetch(endpoint, fetchOptions);
+      } catch (error) {
+        lastError = error;
+
+        if (!this.isRetryableError(error) || attempt === maxRetries) {
+          Log.debug(
+            `${context} failed permanently after ${attempt} attempts: %O`,
+            error,
+          );
+          throw error;
+        }
+
+        const delay = Math.min(1000 * 2 ** (attempt - 1), 10000); // Exponential backoff with max 10s
+        Log.debug(
+          `${context} failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms: %O`,
+          error,
+        );
+        await pause(delay);
+      }
+    }
+
+    throw lastError;
+  }
+
+  /**
    * Makes an authenticated request to the NilDb API
    */
   async request<TSuccess>(options: {
@@ -79,22 +162,27 @@ export class NilDbBaseClient {
     }
 
     const endpoint = new URL(path, this.#options.baseUrl).toString();
+    const context = `${method} ${path}`;
 
-    const response = await fetch(endpoint, {
-      method,
-      headers,
-      ...(body && { body: JSON.stringify(body) }),
-    });
+    const response = await this.fetchWithRetry(
+      endpoint,
+      {
+        method,
+        headers,
+        ...(body && { body: JSON.stringify(body) }),
+      },
+      context,
+    );
 
     const contentType = response.headers.get("content-type") ?? "";
     const status = response.status;
 
     if (contentType.includes("application/json")) {
       const json = await response.json();
-      Log.debug({ path, json, status }, "Response was application/json");
+      Log.debug({ endpoint, json, status }, "Response was application/json");
 
       if (!response.ok) {
-        this.handleErrorResponse(response, method, path, json);
+        this.handleErrorResponse(response, method, endpoint, json);
       }
 
       return responseSchema.parse(json);
@@ -102,7 +190,7 @@ export class NilDbBaseClient {
 
     if (contentType.includes("text/plain")) {
       const text = await response.text();
-      Log.debug({ path, text, status }, "Response was text/plain");
+      Log.debug({ endpoint, text, status }, "Response was text/plain");
 
       if (!response.ok) {
         this.handleErrorResponse(response, method, path, text);
@@ -111,7 +199,7 @@ export class NilDbBaseClient {
       return responseSchema.parse(text);
     }
 
-    Log.debug({ path, status }, "Response had no body");
+    Log.debug({ endpoint, status }, "Response had no body");
     if (!response.ok) {
       this.handleErrorResponse(response, method, path, null);
     }

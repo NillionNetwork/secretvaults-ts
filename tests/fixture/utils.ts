@@ -17,10 +17,6 @@ export function createTestLogger(): Logger {
   });
 }
 
-export function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 export function waitForQueryRun(
   c: FixtureContext,
   runs: ByNodeName<Uuid>,

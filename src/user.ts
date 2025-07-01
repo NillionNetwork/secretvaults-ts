@@ -20,8 +20,8 @@ import {
   processPlaintextResponse,
 } from "./common/cluster";
 import { NucCmd } from "./common/nuc-cmd";
-import { intoSecondsFromNow } from "./common/time";
 import { type ByNodeName, Did } from "./common/types";
+import { intoSecondsFromNow } from "./common/utils";
 import type {
   CreateDataResponse,
   CreateOwnedDataRequest,
