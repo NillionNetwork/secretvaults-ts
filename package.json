@@ -18,14 +18,14 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "debug": "^4.4.1",
-    "pino": "^9.7.0",
-    "uuid": "^11.1.0",
     "zod": "^3.25.67"
   },
   "peerDependencies": {
     "@nillion/blindfold": "0.1.0-rc.1",
-    "@nillion/nuc": "0.1.0-rc.10"
+    "@nillion/nuc": "0.1.0-rc.10",
+    "pino": "^9.7.0",
+    "pino-pretty": "^13.0.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
@@ -35,14 +35,13 @@
     "@commitlint/types": "^19.8.1",
     "@faker-js/faker": "^9.8.0",
     "@types/debug": "^4.1.12",
-    "@types/node": "^24.0.7",
+    "@types/node": "^24.0.8",
     "@types/semver": "^7.7.0",
     "@vitest/coverage-v8": "3.2.4",
     "docker-compose": "^1.2.0",
     "dotenv": "^17.0.0",
     "lefthook": "^1.11.14",
     "mongodb": "^6.17.0",
-    "pino-pretty": "^13.0.0",
     "semver": "^7.7.2",
     "tsup": "^8.5.0",
     "tsx": "^4.20.3",
@@ -52,7 +51,7 @@
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"
   },
-  "packageManager": "pnpm@10.12.1",
+  "packageManager": "pnpm@10.12.4",
   "files": [
     "dist",
     "LICENSE",
