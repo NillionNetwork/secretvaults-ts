@@ -1,4 +1,5 @@
 import pino, { type Level } from "pino";
+import { prettyFactory } from "pino-pretty";
 
 export type LogLevel = Level | "silent";
 
@@ -62,7 +63,6 @@ function getInitialLogLevel(): LogLevel {
     }
   }
 
-  console.log(`NILLION_LOG_LEVEL=${level}`);
   return level;
 }
 
@@ -90,8 +90,20 @@ function getLogerForEnv() {
         levelFirst: true,
         translateTime: "SYS:h:MM:ss TT",
         ignore: "pid,hostname",
+        sync: true,
       },
     },
+    hooks:
+      process.env.NODE_ENV === "test"
+        ? {
+            streamWrite: (s) => {
+              // Mirror to console.log so vitest doesn't swallow logs
+              const prettify = prettyFactory({ sync: true, colorize: true });
+              console.log(prettify(s));
+              return s;
+            },
+          }
+        : undefined,
   });
 }
 
