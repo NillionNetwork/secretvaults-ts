@@ -2,11 +2,12 @@ import * as crypto from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
 import type { ByNodeName, Did, Uuid } from "#/common/types";
+import { pause } from "#/common/utils";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import collection from "./data/standard.collection.json";
 import query from "./data/standard.query.json";
 import { createFixture } from "./fixture/fixture";
-import { delay, waitForQueryRun } from "./fixture/utils";
+import { waitForQueryRun } from "./fixture/utils";
 
 describe("standard-data.test.ts", () => {
   const { test, beforeAll, afterAll } = createFixture({
@@ -41,7 +42,7 @@ describe("standard-data.test.ts", () => {
     await builder.createCollection(collection as CreateCollectionRequest);
 
     // pause to avoid race condition
-    await delay(1000);
+    await pause(1000);
 
     const result = await builder.readProfile();
     expect(result.data.collections).toHaveLength(1);

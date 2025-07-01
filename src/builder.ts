@@ -10,7 +10,7 @@ import {
   type SubscriptionStatusResponse,
 } from "@nillion/nuc";
 import { SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
-import { intoSecondsFromNow } from "#/common/time";
+import { intoSecondsFromNow } from "#/common/utils";
 import { Log } from "#/logger";
 import {
   type BlindfoldFactoryConfig,
