@@ -22,36 +22,36 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "zod": "^3.25.67"
+    "zod": "^4.0.2"
   },
   "peerDependencies": {
-    "@nillion/blindfold": "0.1.0-rc.1",
-    "@nillion/nuc": "0.1.0-rc.10",
+    "@nillion/blindfold": "0.1.0",
+    "@nillion/nuc": "0.1.0",
     "pino": "^9.7.0",
     "pino-pretty": "^13.0.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
-    "@biomejs/biome": "2.0.6",
+    "@biomejs/biome": "2.1.1",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@commitlint/types": "^19.8.1",
-    "@faker-js/faker": "^9.8.0",
+    "@faker-js/faker": "^9.9.0",
     "@types/debug": "^4.1.12",
-    "@types/node": "^24.0.8",
+    "@types/node": "^24.0.12",
     "@types/semver": "^7.7.0",
     "@vitest/coverage-v8": "3.2.4",
     "docker-compose": "^1.2.0",
-    "dotenv": "^17.0.0",
-    "lefthook": "^1.11.14",
+    "dotenv": "^17.2.0",
+    "lefthook": "^1.12.1",
     "mongodb": "^6.17.0",
     "semver": "^7.7.2",
     "tsup": "^8.5.0",
     "tsx": "^4.20.3",
     "type-fest": "^4.41.0",
     "typescript": "^5.8.3",
-    "vite": "^7.0.0",
+    "vite": "^7.0.3",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"
   },
