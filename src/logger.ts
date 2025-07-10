@@ -66,7 +66,7 @@ function getInitialLogLevel(): LogLevel {
   return level;
 }
 
-function getLogerForEnv() {
+function getLoggerForEnv() {
   const env = process.env.NODE_ENV ?? "production";
   if (env === "production") {
     return pino({
@@ -107,7 +107,7 @@ function getLogerForEnv() {
   });
 }
 
-export const Log = getLogerForEnv();
+export const Log = getLoggerForEnv();
 
 export function setLogLevel(level: LogLevel): void {
   if (!isValidLogLevel(level)) {
