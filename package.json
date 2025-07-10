@@ -7,6 +7,10 @@
   "scripts": {
     "install-hooks": "lefthook install",
     "attw": "attw --profile esm-only --pack .",
+    "check": "biome check --fix && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint --fix",
+    "format": "biome format --fix",
     "build": "tsup",
     "test": "vitest run"
   },
