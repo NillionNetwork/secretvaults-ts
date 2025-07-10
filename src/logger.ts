@@ -1,5 +1,5 @@
-import pino, { type Level } from "pino";
-import { prettyFactory } from "pino-pretty";
+import pino, { type Level, type Logger, type LoggerOptions } from "pino";
+import pinoPretty, { prettyFactory } from "pino-pretty";
 
 export type LogLevel = Level | "silent";
 
@@ -66,45 +66,47 @@ function getInitialLogLevel(): LogLevel {
   return level;
 }
 
-function getLoggerForEnv() {
+declare const window: unknown;
+
+function getLoggerForEnv(): Logger<never, boolean> {
   const env = process.env.NODE_ENV ?? "production";
-  if (env === "production") {
+  const level = getInitialLogLevel();
+  const isNode = typeof window === "undefined";
+
+  // For production OR any browser environment, return a simple logger.
+  if (env === "production" || !isNode) {
     return pino({
-      level: getInitialLogLevel(),
-      browser: {
-        asObject: true,
-      },
+      level,
+      browser: { asObject: true },
       base: null,
     });
   }
 
-  return pino({
-    level: getInitialLogLevel(),
-    browser: {
-      asObject: true,
-    },
-    transport: {
-      target: "pino-pretty",
-      options: {
-        colorize: true,
-        levelFirst: true,
-        translateTime: "SYS:h:MM:ss TT",
-        ignore: "pid,hostname",
-        sync: true,
-      },
-    },
-    hooks:
-      process.env.NODE_ENV === "test"
-        ? {
-            streamWrite: (s) => {
-              // Mirror to console.log so vitest doesn't swallow logs
-              const prettify = prettyFactory({ sync: true, colorize: true });
-              console.log(prettify(s));
-              return s;
-            },
-          }
-        : undefined,
+  const stream = pinoPretty({
+    colorize: true,
+    levelFirst: true,
+    translateTime: "SYS:h:MM:ss TT",
+    ignore: "pid,hostname",
+    sync: true,
   });
+
+  // If test, mirror to console.log so vitest doesn't swallow logs
+  const hooks: Partial<LoggerOptions["hooks"]> = {};
+  if (env === "test") {
+    hooks.streamWrite = (s: string): string => {
+      const prettify = prettyFactory({ sync: true, colorize: true });
+      console.log(prettify(s));
+      return s;
+    };
+  }
+
+  return pino(
+    {
+      level,
+      hooks,
+    },
+    stream,
+  );
 }
 
 export const Log = getLoggerForEnv();
