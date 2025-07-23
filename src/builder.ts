@@ -641,10 +641,10 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     }
 
     const result = await executeOnCluster(this.nodes, (client) => {
-      const token = NucTokenBuilder.extending(this.rootToken)
-        .command(NucCmd.nil.db.data.update)
-        .audience(client.id)
-        .build(this.keypair.privateKey());
+      const token = this.mintRootInvocation({
+        audience: client.id,
+        command: NucCmd.nil.db.data.update,
+      });
 
       const id = Did.parse(client.id.toString());
       return client.updateData(token, nodePayloads[id]);
