@@ -624,18 +624,19 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     if (key) {
       const concealedSetShares = await conceal(key, body.update);
       if (concealedSetShares.length !== clients.length) {
-        throw new Error("Concealed shares count must match node count.");
+        Log.debug("No shares detected so no data concealed");
+        nodePayloads = preparePlaintextRequest({ clients, body });
+      } else {
+        const pairs = clients.map((client, index) => {
+          const payload: UpdateDataRequest = {
+            ...body,
+            update: { $set: concealedSetShares[index] },
+          };
+
+          return [client.id.toString(), payload] as const;
+        });
+        nodePayloads = Object.fromEntries(pairs);
       }
-
-      const pairs = clients.map((client, index) => {
-        const payload: UpdateDataRequest = {
-          ...body,
-          update: { $set: concealedSetShares[index] },
-        };
-
-        return [client.id.toString(), payload] as const;
-      });
-      nodePayloads = Object.fromEntries(pairs);
     } else {
       nodePayloads = preparePlaintextRequest({ clients, body });
     }
