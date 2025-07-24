@@ -1,5 +1,6 @@
-import type { ClusterKey, SecretKey } from "@nillion/blindfold";
-import { conceal, reveal } from "#/common/blindfold";
+import { type ClusterKey, encrypt, type SecretKey } from "@nillion/blindfold";
+import { isPlainObject } from "es-toolkit";
+import { reveal } from "#/common/blindfold";
 import type { ByNodeName, Did } from "#/common/types";
 import { Log } from "#/logger";
 import type { NilDbBaseClient } from "#/nildb/base-client";
@@ -60,76 +61,176 @@ export async function executeOnCluster<Client extends NilDbBaseClient, T>(
   return Object.fromEntries(successes);
 }
 
+type AllotInfo = {
+  path: string;
+  value: string | number | bigint | Uint8Array<ArrayBufferLike>;
+};
+
 /**
- * Prepares a request by concealing its data for distribution to all nodes.
+ * Recursively walks a data structure (objects and arrays) to find all properties
+ * with the key "%allot" (case-insensitive) and returns their dot-notation paths and values.
+ *
+ * @example
+ * const obj = {
+ *   "%allot": "secret1",
+ *   data: [
+ *     { "%allot": "secret2" },
+ *     { nested: { "%ALLOT": "secret3" } }
+ *   ]
+ * };
+ *
+ * findAllotPathsAndValues(obj);
+ * // Returns:
+ * // [
+ * //   { path: "%allot", value: "secret1" },
+ * //   { path: "data.0.%allot", value: "secret2" },
+ * //   { path: "data.1.nested.%ALLOT", value: "secret3" }
+ * // ]
  */
-export async function prepareConcealedRequest<
-  T extends { data: Record<string, unknown>[] },
+function findAllotPathsAndValues(
+  node: Record<string, unknown> | unknown[],
+  currentPath = "",
+): AllotInfo[] {
+  // Handle arrays
+  if (Array.isArray(node)) {
+    return node.flatMap((item, index) => {
+      const fullPath = currentPath ? `${currentPath}.${index}` : `${index}`;
+      if (isPlainObject(item)) {
+        return findAllotPathsAndValues(
+          item as Record<string, unknown>,
+          fullPath,
+        );
+      }
+      return [];
+    });
+  }
+
+  // Handle objects
+  return Object.entries(node).flatMap(([key, value]) => {
+    const fullPath = currentPath ? `${currentPath}.${key}` : key;
+
+    if (key.toLowerCase() === "%allot") {
+      return [{ path: fullPath, value }];
+    }
+    if (isPlainObject(value)) {
+      return findAllotPathsAndValues(
+        value as Record<string, unknown>,
+        fullPath,
+      );
+    }
+    if (Array.isArray(value)) {
+      return findAllotPathsAndValues(value, fullPath);
+    }
+    return [];
+  }) as AllotInfo[];
+}
+
+/**
+ * Prepares a request body for distribution across multiple nodes by creating copies
+ * of the body and secret-sharing any values marked with %allot keys.
+ *
+ * @example
+ * const result = await prepareRequest({
+ *   key: secretKey,
+ *   clients: [client1, client2, client3],
+ *   body: {
+ *     data: [{
+ *       foo: "bar",
+ *       "%allot": "secret-value"
+ *     }]
+ *   }
+ * });
+ * // Returns: {
+ * //   "node1": { data: [{ foo: "bar", "%share": "encrypted-share-1" }] },
+ * //   "node2": { data: [{ foo: "bar", "%share": "encrypted-share-2" }] },
+ * //   "node3": { data: [{ foo: "bar", "%share": "encrypted-share-3" }] },
+ * // }
+ */
+export async function prepareRequest<
+  T extends Record<string, unknown>,
 >(options: {
-  key: SecretKey | ClusterKey;
+  key: SecretKey | ClusterKey | undefined;
   clients: NilDbBaseClient[];
   body: T;
 }): Promise<ByNodeName<T>> {
   const { key, clients, body } = options;
 
-  Log.debug(
-    {
-      key: key.constructor.name,
-      nodes: clients.length,
-      documents: body.data.length,
-    },
-    "Preparing concealed data",
-  );
+  // 1. Find all %allot values in the body
+  const allots = findAllotPathsAndValues(body);
 
-  // 1. Conceal documents, eg: [[doc1_shareA, doc1_shareB], [doc2_shareA, doc2_shareB]].
-  const concealedDocs = await Promise.all(
-    body.data.map((d) => conceal(key, d)),
-  );
-
-  // Ensure the number of shares matches the number of clients/nodes.
-  if (concealedDocs.at(0)?.length !== clients.length) {
-    Log.error(
-      {
-        shares: concealedDocs.at(0)?.length,
-        nodes: clients.length,
-      },
-      "Concealed shares count mismatch",
-    );
-    throw new Error("Concealed shares count mismatch.", { cause: options });
+  // 2. Warn if %allots found but no key configured
+  if (!key && allots.length > 0) {
+    throw new Error(`No key but ${allots.length} %allot(s) detected in data`);
   }
 
-  // 2. Transpose the results from a document-major to a node-major structure.
-  // We now have an array where the top-level index corresponds to the client index.
-  // Result: [[doc1_shareA, doc2_shareA], [doc1_shareB, doc2_shareB]]
-  const sharesByNode = clients.map((_, i) =>
-    concealedDocs.map((shares) => shares[i]),
-  );
+  // 3. Create secret shares for each %allot value if key exists
+  const sharesMap = new Map<string, Record<string, unknown>>();
+  if (key && allots.length > 0) {
+    for (const { path, value } of allots) {
+      // Encrypt the value to create shares
+      const encryptedShares = await encrypt(key, value);
 
-  // 3. Map to pairs of [Did, payload] for conversion into a ByNodeName object.
-  const pairs = clients.map((client, index) => {
-    const payload: T = { ...body, data: sharesByNode[index] };
-    return [client.id.toString(), payload] as const;
+      // Map shares to node Dids
+      const sharesByNode: Record<string, unknown> = {};
+      clients.forEach((client, index) => {
+        sharesByNode[client.id.toString()] = encryptedShares[index];
+      });
+
+      sharesMap.set(path, sharesByNode);
+    }
+  }
+
+  // 4 & 5. Create copies and replace %allot: <value> with %share: <nodeX_encrypted_share>
+  const result: ByNodeName<T> = {} as ByNodeName<T>;
+
+  clients.forEach((client) => {
+    const bodyCopy = structuredClone(body) as T;
+
+    // Replace each %allot with %share for this node
+    if (key && allots.length > 0) {
+      for (const { path } of allots) {
+        const sharesByNode = sharesMap.get(path);
+        if (sharesByNode) {
+          // Parse the path to handle array indices
+          const pathParts = path.split(".");
+          const allotKey = pathParts.pop(); // This should be "%allot" or "%ALLOT"
+          if (!allotKey) {
+            throw new Error(
+              `Expected an allot key in the path parts: ${pathParts}`,
+            );
+          }
+
+          if (pathParts.length === 0) {
+            delete bodyCopy[allotKey];
+            // @ts-expect-error correcting types requires out of scope wider refactor
+            bodyCopy["%share"] = sharesByNode[client.id.toString()];
+          } else {
+            // biome-ignore lint/suspicious/noExplicitAny: Navigate to parent to handle array indices
+            let parent: any = bodyCopy;
+            for (const part of pathParts) {
+              // Check if part is a number (array index)
+              const index = Number(part);
+              if (Number.isNaN(index)) {
+                parent = parent[part];
+              } else {
+                parent = parent[index];
+              }
+            }
+
+            // Replace %allot with %share
+            delete parent[allotKey];
+            parent["%share"] = sharesByNode[client.id.toString()];
+          }
+        }
+      }
+    }
+
+    // @ts-expect-error correcting types requires out of scope wider refactor
+    result[client.id.toString()] = bodyCopy;
   });
 
-  Log.debug("Concealed data prepared");
-  return Object.fromEntries(pairs);
-}
-
-/**
- * Prepares a plaintext request by replicating the body for each node.
- */
-export function preparePlaintextRequest<T>(options: {
-  clients: NilDbBaseClient[];
-  body: T;
-}): ByNodeName<T> {
-  const { clients, body } = options;
-  Log.debug({ nodes: clients.length }, "Preparing plaintext request");
-
-  const pairs: [Did, T][] = clients.map(
-    (c) => [c.id.toString() as Did, { ...body }] as const,
-  );
-
-  return Object.fromEntries(pairs);
+  // 6. Return the bodies mapped by node name
+  return result;
 }
 
 /**

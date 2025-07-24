@@ -14,8 +14,7 @@ import {
 } from "./common/blindfold";
 import {
   executeOnCluster,
-  prepareConcealedRequest,
-  preparePlaintextRequest,
+  prepareRequest,
   processConcealedObjectResponse,
   processPlaintextResponse,
 } from "./common/cluster";
@@ -132,9 +131,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     const { key, clients } = this._options;
 
     // 1. Prepare map of node-id to node-specific payload.
-    const nodePayloads = key
-      ? await prepareConcealedRequest({ key, clients, body })
-      : preparePlaintextRequest({ clients, body });
+    const nodePayloads = await prepareRequest({ key, clients, body });
 
     // 2. Execute on all nodes, looking up the payload by node id.
     const result = await executeOnCluster(this.nodes, (client) => {

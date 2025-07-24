@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { conceal } from "#/common/blindfold";
 import {
   executeOnCluster,
-  prepareConcealedRequest,
-  preparePlaintextRequest,
+  prepareRequest,
   processConcealedListResponse,
   processConcealedObjectResponse,
   processPlaintextResponse,
@@ -54,11 +53,11 @@ describe("executeOnCluster", () => {
   });
 });
 
-describe("preparePlaintextRequest", () => {
+describe("prepare plaintext request", () => {
   it("replicates body for each client", async () => {
     const clients = createNilDbBaseClients(3);
     const body = { message: "hello", count: 42 };
-    const result: any = preparePlaintextRequest({ clients, body });
+    const result: any = await prepareRequest({ key: undefined, clients, body });
 
     expect(result).toEqual({
       "node-1": { message: "hello", count: 42 },
@@ -70,7 +69,7 @@ describe("preparePlaintextRequest", () => {
   it("creates separate copies for each node", async () => {
     const clients = createNilDbBaseClients(2);
     const body = { data: [{ nested: "value" }] };
-    const result: any = preparePlaintextRequest({ clients, body });
+    const result: any = await prepareRequest({ key: undefined, clients, body });
 
     // Verify they're separate objects
     expect(result["node-1"]).not.toBe(result["node-2"]);
@@ -138,7 +137,7 @@ describe("prepareConcealedRequest with SecretKey", () => {
         },
       ],
     };
-    const result: any = await prepareConcealedRequest({ key, clients, body });
+    const result: any = await prepareRequest({ key, clients, body });
 
     // Should have entry for each client
     expect(Object.keys(result)).toHaveLength(2);
@@ -168,7 +167,7 @@ describe("prepareConcealedRequest with SecretKey", () => {
       ],
     };
 
-    const result: any = await prepareConcealedRequest({ key, clients, body });
+    const result: any = await prepareRequest({ key, clients, body });
 
     // Each node should get shares for both documents
     expect(result["node-1"].data).toHaveLength(2);
@@ -180,7 +179,7 @@ describe("prepareConcealedRequest with SecretKey", () => {
   });
 });
 
-describe("prepareConcealedRequest with ClusterKey", () => {
+describe("prepareRequest with ClusterKey", () => {
   let key: ClusterKey;
   let clients: NilDbBaseClient[];
 
@@ -200,7 +199,7 @@ describe("prepareConcealedRequest with ClusterKey", () => {
       ],
     };
 
-    const result: any = await prepareConcealedRequest({ key, clients, body });
+    const result: any = await prepareRequest({ key, clients, body });
 
     // Shares exist and are different
     const share1 = result["node-1"].data[0].patent["%share"];
@@ -212,19 +211,6 @@ describe("prepareConcealedRequest with ClusterKey", () => {
     expect(result["node-1"].data[0].hospital).toBe("General Hospital");
     expect(result["node-2"].data[0].hospital).toBe("General Hospital");
     expect(result["node-3"].data[0].hospital).toBe("General Hospital");
-  });
-});
-
-describe("prepareConcealedRequest error handling", () => {
-  it("throws error when share count doesn't match client count", async () => {
-    // Create key for 2 nodes but provide 3 clients
-    const key = await SecretKey.generate({ nodes: [{}, {}] }, { store: true });
-    const clients = createNilDbBaseClients(3);
-    const body = { data: [{ _id: "doc1", value: { "%allot": "secret" } }] };
-
-    await expect(
-      prepareConcealedRequest({ key, clients, body }),
-    ).rejects.toThrow("Concealed shares count mismatch");
   });
 });
 

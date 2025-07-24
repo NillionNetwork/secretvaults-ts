@@ -161,6 +161,9 @@ async function buildContext(
       auth: nilauthUrl,
       dbs: nildbNodesUrls,
     },
+    blindfold: {
+      operation: "store",
+    },
   });
 
   const payer = await new PayerBuilder()
