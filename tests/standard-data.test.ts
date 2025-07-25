@@ -55,7 +55,7 @@ describe("standard-data.test.ts", () => {
     data = [
       {
         _id: crypto.randomUUID().toString(),
-        name: "tim",
+        name: "a",
       },
     ];
 
@@ -106,7 +106,7 @@ describe("standard-data.test.ts", () => {
 
     const results = await builder.tailData(collection._id as Uuid, 5);
     expect(results.data).toHaveLength(1);
-    expect(results.data.at(0)?.name).toBe("tim");
+    expect(results.data.at(0)?.name).toBe("a");
   });
 
   test("create and run query", async ({ c }) => {

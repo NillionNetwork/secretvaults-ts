@@ -1,6 +1,6 @@
 {
   "name": "@nillion/secretvaults",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "description": "A client for interacting with nillion's nildb blind module",
   "type": "module",
@@ -22,7 +22,8 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "zod": "^4.0.2"
+    "es-toolkit": "^1.39.7",
+    "zod": "^3.25.67"
   },
   "peerDependencies": {
     "@nillion/blindfold": "0.1.0",

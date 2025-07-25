@@ -14,13 +14,11 @@ import { intoSecondsFromNow } from "#/common/utils";
 import { Log } from "#/logger";
 import {
   type BlindfoldFactoryConfig,
-  conceal,
   toBlindfoldKey,
 } from "./common/blindfold";
 import {
   executeOnCluster,
-  prepareConcealedRequest,
-  preparePlaintextRequest,
+  prepareRequest,
   processConcealedListResponse,
   processPlaintextResponse,
 } from "./common/cluster";
@@ -422,9 +420,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     const { body, delegation } = options;
     const { key, clients } = this._options;
 
-    const nodePayloads = key
-      ? await prepareConcealedRequest({ key, clients, body })
-      : preparePlaintextRequest({ clients, body });
+    const nodePayloads = await prepareRequest({ key, clients, body });
 
     const result = await executeOnCluster(this.nodes, (client) => {
       let token = delegation;
@@ -617,36 +613,14 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   ): Promise<ByNodeName<UpdateDataResponse>> {
     const { key, clients } = this._options;
 
-    let nodePayloads: ByNodeName<UpdateDataRequest>;
-
-    // The update payload is a single object, not an array of documents,
-    // so we build the concealed request manually instead of using a helper.
-    if (key) {
-      const concealedSetShares = await conceal(key, body.update);
-      if (concealedSetShares.length !== clients.length) {
-        throw new Error("Concealed shares count must match node count.");
-      }
-
-      const pairs = clients.map((client, index) => {
-        const payload: UpdateDataRequest = {
-          ...body,
-          update: { $set: concealedSetShares[index] },
-        };
-
-        return [client.id.toString(), payload] as const;
-      });
-      nodePayloads = Object.fromEntries(pairs);
-    } else {
-      nodePayloads = preparePlaintextRequest({ clients, body });
-    }
-
+    const nodePayloads = await prepareRequest({ key, clients, body });
     const result = await executeOnCluster(this.nodes, (client) => {
-      const token = NucTokenBuilder.extending(this.rootToken)
-        .command(NucCmd.nil.db.data.update)
-        .audience(client.id)
-        .build(this.keypair.privateKey());
+      const token = this.mintRootInvocation({
+        audience: client.id,
+        command: NucCmd.nil.db.data.update,
+      });
 
-      const id = Did.parse(client.id.toString());
+      const id = client.id.toString() as Did;
       return client.updateData(token, nodePayloads[id]);
     });
 
