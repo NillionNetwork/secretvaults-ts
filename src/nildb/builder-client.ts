@@ -56,6 +56,7 @@ export type NilDbBuilderClientOptions = z.infer<
  *
  */
 export class NilDbBuilderClient extends NilDbBaseClient {
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: currently unused but useful to keep
   #options: NilDbBuilderClientOptions;
 
   constructor(options: NilDbBuilderClientOptions) {
