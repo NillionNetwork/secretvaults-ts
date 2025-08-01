@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
 import type { Uuid } from "#/common/types";
 import {
