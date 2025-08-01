@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
 import {
   CreateDataResponse,
@@ -26,6 +26,7 @@ export const NilDbUserClientOptions = z.object({
 export type NilDbUserClientOptions = z.infer<typeof NilDbUserClientOptions>;
 
 export class NilDbUserClient extends NilDbBaseClient {
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: currently unused but useful to keep
   #options: NilDbUserClientOptions;
 
   constructor(options: NilDbUserClientOptions) {

@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { Did } from "#/common/types";
 import { ApiSuccessResponse, Name } from "./common";
 

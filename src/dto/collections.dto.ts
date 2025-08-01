@@ -1,15 +1,13 @@
-import { z } from "zod/v4";
-import { Did } from "#/common/types";
+import { z } from "zod";
 import { ApiSuccessResponse } from "./common";
 
 /**
  * Collection document data.
  */
 export const CollectionDocumentDto = z.object({
-  owner: Did,
+  id: z.uuid(),
   type: z.enum(["standard", "owned"]),
   name: z.string(),
-  schema: z.record(z.string(), z.unknown()),
 });
 
 /**

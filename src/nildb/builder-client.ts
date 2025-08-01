@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
 import type { Uuid } from "#/common/types";
 import {
@@ -56,6 +56,7 @@ export type NilDbBuilderClientOptions = z.infer<
  *
  */
 export class NilDbBuilderClient extends NilDbBaseClient {
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: currently unused but useful to keep
   #options: NilDbBuilderClientOptions;
 
   constructor(options: NilDbBuilderClientOptions) {

@@ -1,5 +1,5 @@
 import { Did as NucDid } from "@nillion/nuc";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
 import { isError, pause } from "#/common/utils";
 import {
