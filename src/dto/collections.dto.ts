@@ -133,6 +133,7 @@ export const CollectionMetadataDto = z.object({
   first_write: z.iso.datetime(),
   last_write: z.iso.datetime(),
   indexes: z.array(CollectionIndexDto),
+  schema: z.record(z.string(), z.unknown()),
 });
 
 /**
