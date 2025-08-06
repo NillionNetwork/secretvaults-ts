@@ -62,6 +62,29 @@ describe("owned-data.test.ts", () => {
     expect(result.data.collections.at(0)).toBe(collection._id);
   });
 
+  test("read owned collection metadata with schema", async ({ c }) => {
+    const { builder, expect } = c;
+
+    const result = await builder.readCollection(collection._id as Uuid);
+
+    expect(result.data._id).toBe(collection._id);
+    expect(result.data.count).toBeGreaterThanOrEqual(0);
+    expect(result.data.schema).toEqual(collection.schema);
+
+    const schema = result.data.schema as any;
+    expect(schema.$schema).toBe(collection.schema.$schema);
+    expect(schema.type).toBe(collection.schema.type);
+    expect(schema.uniqueItems).toBe(collection.schema.uniqueItems);
+    expect(schema.items).toBeDefined();
+    expect(schema.items.type).toBe(collection.schema.items.type);
+    expect(schema.items.properties).toBeDefined();
+    expect(schema.items.properties._id).toEqual({
+      type: "string",
+      format: "uuid",
+    });
+    expect(schema.items.required).toEqual(collection.schema.items.required);
+  });
+
   test("user can upload data", async ({ c }) => {
     const { builder, user, expect } = c;
 
