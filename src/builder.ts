@@ -79,11 +79,49 @@ export type SecretVaultBuilderOptions =
   };
 
 /**
- * Client for builders to manage their SecretVaults with automatic handling of concealed data if configured.
+ * Client for performing builder operations on SecretVaults.
+ *
+ * This client handles all builder-specific operations including registration,
+ * collection management, data operations, and query execution. It supports
+ * automatic handling of concealed data when configured with blindfold.
+ *
+ * @example
+ * ```typescript
+ * const client = await SecretVaultBuilderClient.from({
+ *   keypair: myKeypair,
+ *   urls: {
+ *     chain: "http://localhost:26657",
+ *     auth: "http://localhost:8080",
+ *     dbs: ["http://localhost:3000"]
+ *   }
+ * });
+ * ```
  */
 export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilderClient> {
   /**
    * Creates and initializes a new SecretVaultBuilderClient instance.
+   *
+   * @param options - Configuration options for the client
+   * @param options.keypair - The builder's keypair for authentication
+   * @param options.urls - Service URLs configuration
+   * @param options.urls.chain - URL of the blockchain service
+   * @param options.urls.auth - URL of the authentication service
+   * @param options.urls.dbs - Array of database service URLs
+   * @param options.blindfold - Optional blindfold configuration for concealed data
+   * @returns A promise that resolves to a configured SecretVaultBuilderClient
+   *
+   * @example
+   * ```typescript
+   * const client = await SecretVaultBuilderClient.from({
+   *   keypair: myKeypair,
+   *   urls: {
+   *     chain: "http://localhost:26657",
+   *     auth: "http://localhost:8080",
+   *     dbs: ["http://localhost:3000", "http://localhost:3001"]
+   *   },
+   *   blindfold: { // optional blindfold config }
+   * });
+   * ```
    */
   static async from(options: {
     keypair: Keypair;

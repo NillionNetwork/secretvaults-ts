@@ -7,6 +7,57 @@
 
 If you're unsure where to start, head over to [docs.nillion.com](https://docs.nillion.com).
 
+## Documentation
+
+This project uses TypeDoc to generate API documentation from TypeScript source code and TSDoc comments.
+
+### Generating Documentation
+
+To generate the documentation:
+
+```bash
+pnpm docs
+```
+
+This creates static HTML documentation in the `docs/` directory.
+
+### Writing Documentation
+
+We use [TSDoc](https://tsdoc.org/) comments (JSDoc-style) to document our code. TSDoc provides a standardized syntax for TypeScript documentation comments. Please refer to the [TSDoc documentation](https://tsdoc.org/) for comprehensive guidelines and examples.
+
+### Serving Documentation Locally
+
+To generate and serve the documentation on a local server:
+
+```bash
+pnpm docs:serve
+```
+
+This will start a local server and open the documentation in your browser. The documentation will typically be available at `http://localhost:3000`.
+
+Alternatively, you can use any static file server:
+
+```bash
+# Using Python
+cd docs && python3 -m http.server 8000
+
+# Using Node.js
+npx http-server docs -p 8080
+```
+
+### Automated Documentation Deployment
+
+Documentation is automatically built and deployed via GitHub Actions:
+
+- **Main branch**: Deploys to GitHub Pages root
+- **Pull requests**: Builds docs and posts a comment with artifact link
+- **Other branches**: Can be configured to deploy to subdirectories
+
+To enable GitHub Pages:
+1. Go to Settings → Pages in your GitHub repository
+2. Set Source to "GitHub Actions"
+3. The documentation will be available at `https://[username].github.io/[repository]/`
+
 ## Contributing
 
 We welcome contributions! Here's how you can get involved:
