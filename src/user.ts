@@ -55,7 +55,11 @@ export type SecretVaultUserOptions = SecretVaultBaseOptions<NilDbUserClient>;
  * ```typescript
  * const client = await SecretVaultUserClient.from({
  *   keypair: myKeypair,
- *   baseUrls: ["http://localhost:3000"],
+ *   baseUrls: [
+ *     'https://nildb-stg-n1.nillion.network',
+ *     'https://nildb-stg-n2.nillion.network',
+ *     'https://nildb-stg-n3.nillion.network',
+ *   ],
  *   blindfold: { // optional blindfold config }
  * })
  * ```
@@ -66,7 +70,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    *
    * @param options - Configuration options for the client
    * @param options.keypair - The user's keypair for authentication
-   * @param options.baseUrls - Array of database service URLs
+   * @param options.baseUrls - URL Array of nilDB node endpoints
    * @param options.blindfold - Optional blindfold configuration for concealed data
    * @returns A promise that resolves to a configured SecretVaultUserClient
    *
@@ -74,7 +78,11 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    * ```typescript
    * const client = await SecretVaultUserClient.from({
    *   keypair: myKeypair,
-   *   baseUrls: ["http://localhost:3000", "http://localhost:3001"]
+   *   baseUrls: [
+   *     'https://nildb-stg-n1.nillion.network',
+   *     'https://nildb-stg-n2.nillion.network',
+   *     'https://nildb-stg-n3.nillion.network',
+   *   ],
    * });
    * ```
    */
