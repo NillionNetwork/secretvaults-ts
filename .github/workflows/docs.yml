@@ -43,7 +43,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build documentation
-        run: pnpm docs
+        run: npx typedoc
+        env:
+          CI: true
+          NO_BROWSER: true
+          BROWSER: none
 
       - name: Get branch name
         id: branch
