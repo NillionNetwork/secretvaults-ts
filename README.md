@@ -5,11 +5,11 @@
 
 ## Getting Started
 
-If you're unsure where to start, head over to [docs.nillion.com](https://docs.nillion.com).
+If you're unsure where to start, head over to the [Nillion Private Storage Docs](https://docs.nillion.com/build/private-storage/overview).
 
 ## Documentation
 
-This project uses TypeDoc to generate API documentation from TypeScript source code and TSDoc comments.
+This project uses TypeDoc to generate API documentation from TypeScript source code and TSDoc comments, published here: [https://nillion.pub/secretvaults-ts](https://nillion.pub/secretvaults-ts)
 
 ### Generating Documentation
 

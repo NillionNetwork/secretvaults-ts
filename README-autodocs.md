@@ -1,7 +1,7 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/NillionNetwork/secretvaults-ts/.github%2Fworkflows%2Fci.yaml)
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/NillionNetwork/secretvaults-ts)
 
-A TypeScript client library for building with [Nillion Private Storage](https://docs.nillion.com/build/private-storage/overview), a decentralized storage system keeps sensitive data secret by storing encrypted shares across a cluster of nilDB nodes. Each nilDB node stores a separate share of the encrypted data, ensuring no single node can reveal the original value.
+A TypeScript client library for building with [Nillion Private Storage](https://docs.nillion.com/build/private-storage/overview), a decentralized storage system that keeps sensitive data secret by storing encrypted shares across a cluster of [nilDB nodes](https://docs.nillion.com/learn/blind-modules#nildb). Each nilDB node stores a separate share of the encrypted data, ensuring no single node can reveal the original value.
 
 ## Installation
 
