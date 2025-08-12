@@ -53,11 +53,6 @@ Documentation is automatically built and deployed via GitHub Actions:
 - **Pull requests**: Builds docs and posts a comment with artifact link
 - **Other branches**: Can be configured to deploy to subdirectories
 
-To enable GitHub Pages:
-1. Go to Settings → Pages in your GitHub repository
-2. Set Source to "GitHub Actions"
-3. The documentation will be available at `https://[username].github.io/[repository]/`
-
 ## Contributing
 
 We welcome contributions! Here's how you can get involved:

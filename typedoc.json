@@ -6,7 +6,7 @@
   "excludeProtected": true,
   "excludeExternals": true,
   "name": "@nillion/secretvaults",
-  "readme": "README.md",
+  "readme": "README-autodocs.md",
   "tsconfig": "./tsconfig.json",
   "plugin": [],
   "skipErrorChecking": true

@@ -90,9 +90,9 @@ export type SecretVaultBuilderOptions =
  * const client = await SecretVaultBuilderClient.from({
  *   keypair: myKeypair,
  *   urls: {
- *     chain: "http://localhost:26657",
- *     auth: "http://localhost:8080",
- *     dbs: ["http://localhost:3000"]
+ *     chain: "http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz",
+ *     auth: "https://nilauth.sandbox.app-cluster.sandbox.nilogy.xyz",
+ *     dbs: ["https://nildb-stg-n1.nillion.network", "https://nildb-stg-n2.nillion.network", "https://nildb-stg-n3.nillion.network"]
  *   }
  * });
  * ```
@@ -103,10 +103,10 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    *
    * @param options - Configuration options for the client
    * @param options.keypair - The builder's keypair for authentication
-   * @param options.urls - Service URLs configuration
-   * @param options.urls.chain - URL of the blockchain service
-   * @param options.urls.auth - URL of the authentication service
-   * @param options.urls.dbs - Array of database service URLs
+   * @param options.urls - Nillion service URLs configuration from https://docs.nillion.com/build/network-config
+   * @param options.urls.chain - URL of the nilChain URL
+   * @param options.urls.auth - URL of the nilAuth authentication service
+   * @param options.urls.dbs - URL Array of nilDB node endpoints
    * @param options.blindfold - Optional blindfold configuration for concealed data
    * @returns A promise that resolves to a configured SecretVaultBuilderClient
    *
@@ -115,11 +115,13 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    * const client = await SecretVaultBuilderClient.from({
    *   keypair: myKeypair,
    *   urls: {
-   *     chain: "http://localhost:26657",
-   *     auth: "http://localhost:8080",
-   *     dbs: ["http://localhost:3000", "http://localhost:3001"]
+   *     chain: "http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz",
+   *     auth: "https://nilauth.sandbox.app-cluster.sandbox.nilogy.xyz",
+   *     dbs: ["https://nildb-stg-n1.nillion.network", "https://nildb-stg-n2.nillion.network", "https://nildb-stg-n3.nillion.network"]
    *   },
-   *   blindfold: { // optional blindfold config }
+   *   blindfold: {
+   *     // optional blindfold config
+   *   }
    * });
    * ```
    */
