@@ -28,7 +28,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for all branches
+          fetch-depth: 0 # Fetch all history for all branches
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -71,7 +71,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
           destination_dir: ${{ steps.branch.outputs.path }}
-          keep_files: true  # Don't delete other branches' docs
+          keep_files: true # Don't delete other branches' docs
 
       # Create an index page that lists all branches
       - name: Create branch index
@@ -129,32 +129,30 @@ jobs:
             const targetBranch = context.payload.pull_request.base.ref;
             const sourceBranch = context.payload.pull_request.head.ref;
             const isPRToMain = targetBranch === 'main';
-            
+
             let docsUrl;
             let deploymentInfo;
-            
+
             if (isPRToMain) {
               // For PRs to main, show both current branch docs and where they'll go
               const formattedSourceBranch = sourceBranch.replace('/', '-');
               const currentDocsUrl = `https://nillion.pub/secretvaults-ts/branches/${formattedSourceBranch}/`;
               const futureDocsUrl = 'https://nillion.pub/secretvaults-ts/';
               
-              deploymentInfo = `**Current documentation:** ${currentDocsUrl}\n**After merge to main:** ${futureDocsUrl}`;
+              deploymentInfo = `**Current branch documentation:** ${currentDocsUrl}\n**After merge to main:** ${futureDocsUrl}`;
               docsUrl = futureDocsUrl; // Keep main URL as primary
             } else {
               const formattedBranch = targetBranch.replace('/', '-');
               docsUrl = `https://nillion.pub/secretvaults-ts/branches/${formattedBranch}/`;
               deploymentInfo = `Once merged to ${targetBranch}, the documentation will be available at the branch-specific URL.`;
             }
-            
+
             const comment = `📚 Documentation has been built for this PR!
-            
+
             ${deploymentInfo}
-            
-            **Documentation URL:** ${docsUrl}
-            
+
             The build completed successfully and is ready for deployment upon merge.`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
