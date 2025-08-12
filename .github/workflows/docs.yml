@@ -1,5 +1,9 @@
 name: Deploy Documentation
 
+# This workflow deploys documentation to different subdirectories based on branch name
+# Main branch: /
+# Other branches: /branch-name/
+
 on:
   push:
     branches:
@@ -11,21 +15,18 @@ on:
       - 'feat/**'
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment per branch
-concurrency:
-  group: "pages-${{ github.ref }}"
-  cancel-in-progress: true
-
 jobs:
-  build-docs:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -44,81 +45,96 @@ jobs:
       - name: Build documentation
         run: pnpm docs
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docs-${{ github.sha }}
-          path: ./docs
-          retention-days: 30
+      - name: Get branch name
+        id: branch
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "name=main" >> $GITHUB_OUTPUT
+            echo "path=." >> $GITHUB_OUTPUT
+          else
+            BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's/refs\/heads\///' | sed 's/\//-/g')
+            echo "name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+            echo "path=branches/$BRANCH_NAME" >> $GITHUB_OUTPUT
+          fi
 
-  # Deploy to GitHub Pages (only on push, not PRs)
-  deploy-pages:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feat/'))
-    needs: build-docs
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docs-${{ github.sha }}
-          path: ./docs
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload to Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./docs
-
+      # Deploy to GitHub Pages (only on push, not PRs)
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-  # Comment on PR with preview link (if using a preview service)
-  comment-preview:
-    if: github.event_name == 'pull_request'
-    needs: build-docs
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
+        if: github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          name: docs-${{ github.sha }}
-          path: ./docs
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          destination_dir: ${{ steps.branch.outputs.path }}
+          keep_files: true  # Don't delete other branches' docs
 
-      # Option 1: Deploy to Netlify for PR previews
-      # Uncomment if you want to use Netlify for PR previews
-      # - name: Deploy to Netlify
-      #   uses: nwtgck/actions-netlify@v2.0
-      #   with:
-      #     publish-dir: './docs'
-      #     production-deploy: false
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     deploy-message: "PR Preview from GitHub Actions"
-      #   env:
-      #     NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      #     NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      # Create an index page that lists all branches
+      - name: Create branch index
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p branch-index
+          cat > branch-index/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>SecretVaults Documentation</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 40px; }
+              h1 { color: #333; }
+              .branch-list { list-style: none; padding: 0; }
+              .branch-list li { margin: 10px 0; }
+              .branch-list a { 
+                display: inline-block; 
+                padding: 8px 16px; 
+                background: #0366d6; 
+                color: white; 
+                text-decoration: none; 
+                border-radius: 4px;
+              }
+              .branch-list a:hover { background: #0256c7; }
+              .main { font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <h1>SecretVaults TypeScript Documentation</h1>
+            <p>Select a branch to view its documentation:</p>
+            <ul class="branch-list">
+              <li><a href="/" class="main">Main (Latest Stable)</a></li>
+              <!-- Feature branches will be added here as /branches/feat-branch-name -->
+            </ul>
+          </body>
+          </html>
+          EOF
 
-      # Option 2: Comment with artifact link
+      - name: Deploy branch index
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./branch-index
+          destination_dir: branches
+          keep_files: true
+
+      # Comment on PR with docs info
       - name: Comment PR
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const artifactUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
             const targetBranch = context.payload.pull_request.base.ref;
-            const deploymentNote = targetBranch === 'main' 
-              ? 'The documentation will be available at GitHub Pages once this PR is merged to main.'
-              : `The documentation will be deployed to the ${targetBranch} branch docs once this PR is merged.`;
+            const isPRToMain = targetBranch === 'main';
+            const docsUrl = isPRToMain 
+              ? 'https://${{ github.repository_owner }}.github.io/secretvaults-ts/'
+              : `https://${{ github.repository_owner }}.github.io/secretvaults-ts/branches/${targetBranch.replace('/', '-')}/`;
+            
+            const comment = `📚 Documentation has been built for this PR!
+            
+            Once merged, the documentation will be available at: ${docsUrl}
+            
+            The build completed successfully and is ready for deployment upon merge.`;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `📚 Documentation has been generated for this PR!\n\n[View build artifacts](${artifactUrl})\n\n${deploymentNote}`
+              body: comment
             })
