@@ -1,0 +1,13 @@
+{
+  "entryPoints": ["src/lib.ts"],
+  "out": "docs",
+  "theme": "default",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "name": "@nillion/secretvaults",
+  "readme": "README-autodocs.md",
+  "tsconfig": "./tsconfig.json",
+  "plugin": [],
+  "skipErrorChecking": true
+}

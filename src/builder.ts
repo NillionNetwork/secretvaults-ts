@@ -79,11 +79,51 @@ export type SecretVaultBuilderOptions =
   };
 
 /**
- * Client for builders to manage their SecretVaults with automatic handling of concealed data if configured.
+ * Client for performing builder operations on SecretVaults.
+ *
+ * This client handles all builder-specific operations including registration,
+ * collection management, data operations, and query execution. It supports
+ * automatic handling of concealed data when configured with blindfold.
+ *
+ * @example
+ * ```typescript
+ * const client = await SecretVaultBuilderClient.from({
+ *   keypair: myKeypair,
+ *   urls: {
+ *     chain: "http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz",
+ *     auth: "https://nilauth.sandbox.app-cluster.sandbox.nilogy.xyz",
+ *     dbs: ["https://nildb-stg-n1.nillion.network", "https://nildb-stg-n2.nillion.network", "https://nildb-stg-n3.nillion.network"]
+ *   }
+ * });
+ * ```
  */
 export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilderClient> {
   /**
    * Creates and initializes a new SecretVaultBuilderClient instance.
+   *
+   * @param options - Configuration options for the client
+   * @param options.keypair - The builder's keypair for authentication
+   * @param options.urls - Nillion service URLs configuration from https://docs.nillion.com/build/network-config
+   * @param options.urls.chain - URL of the nilChain URL
+   * @param options.urls.auth - URL of the nilAuth authentication service
+   * @param options.urls.dbs - URL Array of nilDB node endpoints
+   * @param options.blindfold - Optional blindfold configuration for concealed data
+   * @returns A promise that resolves to a configured SecretVaultBuilderClient
+   *
+   * @example
+   * ```typescript
+   * const client = await SecretVaultBuilderClient.from({
+   *   keypair: myKeypair,
+   *   urls: {
+   *     chain: "http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz",
+   *     auth: "https://nilauth.sandbox.app-cluster.sandbox.nilogy.xyz",
+   *     dbs: ["https://nildb-stg-n1.nillion.network", "https://nildb-stg-n2.nillion.network", "https://nildb-stg-n3.nillion.network"]
+   *   },
+   *   blindfold: {
+   *     // optional blindfold config
+   *   }
+   * });
+   * ```
    */
   static async from(options: {
     keypair: Keypair;

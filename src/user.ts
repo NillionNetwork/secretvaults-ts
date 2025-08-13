@@ -45,11 +45,46 @@ import {
 export type SecretVaultUserOptions = SecretVaultBaseOptions<NilDbUserClient>;
 
 /**
- * Client for users to manage owned-documents in SecretVaults.
+ * Client for user operations on SecretVaults.
+ *
+ * This client handles user-specific operations for managing owned documents,
+ * including creation, retrieval, updates, and deletion. It supports automatic
+ * handling of concealed data when configured with blindfold.
+ *
+ * @example
+ * ```typescript
+ * const client = await SecretVaultUserClient.from({
+ *   keypair: myKeypair,
+ *   baseUrls: [
+ *     'https://nildb-stg-n1.nillion.network',
+ *     'https://nildb-stg-n2.nillion.network',
+ *     'https://nildb-stg-n3.nillion.network',
+ *   ],
+ *   blindfold: { // optional blindfold config }
+ * })
+ * ```
  */
 export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient> {
   /**
    * Creates and initializes a new SecretVaultUserClient instance.
+   *
+   * @param options - Configuration options for the client
+   * @param options.keypair - The user's keypair for authentication
+   * @param options.baseUrls - URL Array of nilDB node endpoints
+   * @param options.blindfold - Optional blindfold configuration for concealed data
+   * @returns A promise that resolves to a configured SecretVaultUserClient
+   *
+   * @example
+   * ```typescript
+   * const client = await SecretVaultUserClient.from({
+   *   keypair: myKeypair,
+   *   baseUrls: [
+   *     'https://nildb-stg-n1.nillion.network',
+   *     'https://nildb-stg-n2.nillion.network',
+   *     'https://nildb-stg-n3.nillion.network',
+   *   ],
+   * });
+   * ```
    */
   static async from(options: {
     keypair: Keypair;

@@ -12,6 +12,20 @@ function createNucNamespace(prefix: string) {
   };
 }
 
+/**
+ * Command namespace for NilDB operations.
+ *
+ * Provides pre-configured command objects for interacting with different
+ * NilDB subsystems including system, builders, data, collections, queries, and users.
+ *
+ * @example
+ * ```typescript
+ * import { NucCmd } from "@nillion/secretvaults";
+ *
+ * // Use for creating a collection
+ * const command = NucCmd.nil.db.collections.create;
+ * ```
+ */
 export const NucCmd = {
   nil: {
     db: {
