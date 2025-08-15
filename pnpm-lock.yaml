@@ -12,8 +12,8 @@ importers:
         specifier: 0.1.0
         version: 0.1.0
       '@nillion/nuc':
-        specifier: 0.1.0
-        version: 0.1.0(starknet@7.5.0)
+        specifier: 0.1.1
+        version: 0.1.1(starknet@7.5.0)
       es-toolkit:
         specifier: ^1.39.8
         version: 1.39.8
@@ -507,9 +507,9 @@ packages:
     resolution: {integrity: sha512-tqdfoxk+lTTD9llr7iEyb49iWGGVlBDpF6erx8HWvrL6RZFrjr+0sN9XNZGB4OfFVa7ZsduXcAso1msAObMeuw==}
     engines: {node: '>=20'}
 
-  '@nillion/nuc@0.1.0':
-    resolution: {integrity: sha512-HMLmn9uN/YOHfGTcs4jkOam7faxXGnrNggpAEEE+qZBRVM62bR2olSnFPqw5cwZKA8wDThFeS1mrGiJrizobyA==}
-    engines: {node: '>=23'}
+  '@nillion/nuc@0.1.1':
+    resolution: {integrity: sha512-AvTcO05KSwuYgcSyIr0u2J3T3eWjkTHrVLAuwI3iAlZNhyEeI2wl1hr8S5GoaPrs/ANXwjsAhWmuiKP0+40p8w==}
+    engines: {node: '>=18'}
 
   '@noble/curves@1.7.0':
     resolution: {integrity: sha512-UTMhXK9SeDhFJVrHeUJ5uZlI6ajXg10O6Ddocf9S6GjbSBVZsJo88HzKwXznNfGpMTRDyJkqMjNDPYgf0qFWnw==}
@@ -2601,7 +2601,7 @@ snapshots:
       libsodium-wrappers-sumo: 0.7.15
       paillier-bigint: 3.4.3
 
-  '@nillion/nuc@0.1.0(starknet@7.5.0)':
+  '@nillion/nuc@0.1.1(starknet@7.5.0)':
     dependencies:
       '@bufbuild/protobuf': 2.5.2
       '@cosmjs/proto-signing': 0.33.1
