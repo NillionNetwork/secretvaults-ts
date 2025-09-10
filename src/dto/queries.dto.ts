@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { Did } from "#/common/types";
 import { ApiSuccessResponse } from "./common";
 
 /**
@@ -40,17 +39,12 @@ export const CreateQueryResponse = z.string();
 export type CreateQueryResponse = z.infer<typeof CreateQueryResponse>;
 
 /**
- * Query document data.
+ * Query document response - returned by list/get operations.
  */
 const QueryDocumentResponse = z.object({
   _id: z.uuid(),
-  _created: z.iso.datetime(),
-  _updated: z.iso.datetime(),
-  owner: Did,
   name: z.string().min(1).max(100),
   collection: z.uuid(),
-  variables: z.record(z.string(), QueryVariableValidator),
-  pipeline: z.array(z.record(z.string(), z.unknown())),
 });
 
 /**
