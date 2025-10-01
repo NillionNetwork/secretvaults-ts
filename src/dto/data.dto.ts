@@ -1,13 +1,12 @@
 import { z } from "zod";
-import { Did } from "#/common/types";
-import { ApiSuccessResponse } from "./common";
+import { ApiSuccessResponse, DidString } from "./common";
 import { AclDto } from "./users.dto";
 
 /**
  * Owned data creation request.
  */
 export const CreateOwnedDataRequest = z.object({
-  owner: Did,
+  owner: DidString,
   collection: z.uuid(),
   data: z.array(z.record(z.string(), z.unknown())).min(1),
   acl: AclDto,

@@ -8,13 +8,12 @@ import {
   processConcealedObjectResponse,
   processPlaintextResponse,
 } from "#/common/cluster";
-import type { Did } from "#/common/types";
 import type { NilDbBaseClient } from "#/nildb/base-client";
 
 function createNilDbBaseClients(count: number): NilDbBaseClient[] {
-  // @ts-expect-error This is a primitive mock since we don't need anything fancy
+  // @ts-expect-error a primitive mock since we don't need anything fancy
   return Array.from({ length: count }, (_, i) => ({
-    id: `node-${i + 1}`,
+    id: { didString: `node-${i + 1}` },
   }));
 }
 
@@ -23,7 +22,7 @@ describe("executeOnCluster", () => {
     const clients = createNilDbBaseClients(3);
 
     const operation = async (client: NilDbBaseClient, index: number) => {
-      return `result-${client.id}-${index}`;
+      return `result-${client.id.didString}-${index}`;
     };
 
     const results = await executeOnCluster(clients, operation);
@@ -38,7 +37,7 @@ describe("executeOnCluster", () => {
   it("propagates errors from failed operations", async () => {
     const clients = createNilDbBaseClients(2);
     const operation = async (client: NilDbBaseClient) => {
-      if (client.id.toString() === ("node-2" as Did)) {
+      if (client.id.didString.includes("node-2")) {
         throw new Error("Node 2 failed");
       }
       return "success";

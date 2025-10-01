@@ -1,4 +1,4 @@
-import { Did as NucDid } from "@nillion/nuc";
+import { Did } from "@nillion/nuc";
 import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
 import { isError, pause } from "#/common/utils";
@@ -24,17 +24,19 @@ export type AuthenticatedRequestOptions = {
 
 export class NilDbBaseClient {
   #options: NilDbBaseClientOptions;
+  #id: Did;
 
   constructor(options: NilDbBaseClientOptions) {
     this.#options = options;
+    this.#id = Did.fromPublicKey(this.#options.about.public_key);
   }
 
   get name(): string {
     return this.#options.about.public_key.slice(-4);
   }
 
-  get id(): NucDid {
-    return NucDid.fromHex(this.#options.about.public_key);
+  get id(): Did {
+    return this.#id;
   }
 
   /**

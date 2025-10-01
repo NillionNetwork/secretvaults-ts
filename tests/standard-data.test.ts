@@ -1,9 +1,9 @@
 import * as crypto from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
-import type { ByNodeName, Did, Uuid } from "#/common/types";
 import { pause } from "#/common/utils";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
+import type { ByNodeName, DidString } from "#/dto/common";
 import collection from "./data/standard.collection.json";
 import query from "./data/standard.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -15,24 +15,24 @@ describe("standard-data.test.ts", () => {
     keepDbs: false,
   });
 
-  collection._id = crypto.randomUUID().toString() as Uuid;
-  query._id = crypto.randomUUID().toString() as Uuid;
+  collection._id = crypto.randomUUID().toString();
+  query._id = crypto.randomUUID().toString();
 
   let data: Array<{ _id: string; name: string }>;
 
-  let nildbAId: Did;
-  let nildbBId: Did;
+  let nildbAId: DidString;
+  let nildbBId: DidString;
 
   beforeAll(async (c) => {
     const { builder } = c;
 
     await builder.register({
-      did: builder.did.toString() as Did,
+      did: builder.did.didString,
       name: faker.company.name(),
     });
 
-    nildbAId = builder.nodes.at(0)?.id.toString()! as Did;
-    nildbBId = builder.nodes.at(1)?.id.toString()! as Did;
+    nildbAId = builder.nodes.at(0)?.id.didString!;
+    nildbBId = builder.nodes.at(1)?.id.didString!;
   });
   afterAll(async (_c) => {});
 
@@ -65,7 +65,7 @@ describe("standard-data.test.ts", () => {
         data,
       },
     });
-    const pairs = Object.entries(results);
+    const pairs: [string, any][] = Object.entries(results);
 
     expect(Object.keys(results)).toHaveLength(2);
     for (const [_, result] of pairs) {
@@ -96,7 +96,7 @@ describe("standard-data.test.ts", () => {
     const { builder, expect } = c;
 
     // The method now returns a single, unified response.
-    const result = await builder.readCollection(collection._id as Uuid);
+    const result = await builder.readCollection(collection._id);
     expect(result.data._id).toBe(collection._id);
     expect(result.data.count).toBeGreaterThanOrEqual(0);
     expect(result.data.schema).toEqual(collection.schema);
@@ -118,7 +118,7 @@ describe("standard-data.test.ts", () => {
   test("tail data", async ({ c }) => {
     const { builder, expect } = c;
 
-    const results = await builder.tailData(collection._id as Uuid, 5);
+    const results = await builder.tailData(collection._id, 5);
     expect(results.data).toHaveLength(1);
     expect(results.data.at(0)?.name).toBe("a");
   });
@@ -138,12 +138,12 @@ describe("standard-data.test.ts", () => {
       _id: query._id,
       variables: { name: "tim" },
     });
-    const runs = Object.entries(runResults).reduce(
-      (acc, [id, value]) => {
-        acc[id as Did] = value.data as Uuid;
+    const runs = Object.keys(runResults).reduce(
+      (acc, id) => {
+        acc[id] = runResults[id].data;
         return acc;
       },
-      {} as ByNodeName<Uuid>,
+      {} as ByNodeName<string>,
     );
 
     const results = await waitForQueryRun(c, runs);
@@ -178,7 +178,7 @@ describe("standard-data.test.ts", () => {
     expect(queryFromList?.collection).toBe(collection._id);
 
     // Test getQuery() - should return single query
-    const singleQuery = await builder.getQuery(query._id as Uuid);
+    const singleQuery = await builder.getQuery(query._id);
 
     // Should have results from both nodes
     expect(Object.keys(singleQuery)).toHaveLength(2);

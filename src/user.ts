@@ -1,10 +1,9 @@
 import {
+  Builder,
+  Codec,
   type Command,
-  InvocationBody,
   type Keypair,
   type Did as NucDid,
-  NucTokenBuilder,
-  NucTokenEnvelopeSchema,
 } from "@nillion/nuc";
 import { SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
 import { Log } from "#/logger";
@@ -19,12 +18,12 @@ import {
   processPlaintextResponse,
 } from "./common/cluster";
 import { NucCmd } from "./common/nuc-cmd";
-import { type ByNodeName, Did } from "./common/types";
 import { intoSecondsFromNow } from "./common/utils";
+import type { ByNodeName } from "#/dto/common";
 import type {
   CreateDataResponse,
   CreateOwnedDataRequest,
-} from "./dto/data.dto";
+} from "#/dto/data.dto";
 import type {
   DeleteDocumentRequestParams,
   DeleteDocumentResponse,
@@ -36,7 +35,7 @@ import type {
   ReadUserProfileResponse,
   RevokeAccessToDataRequest,
   RevokeAccessToDataResponse,
-} from "./dto/users.dto";
+} from "#/dto/users.dto";
 import {
   createNilDbUserClient,
   type NilDbUserClient,
@@ -129,7 +128,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     Log.info(
       {
-        did: keypair.toDid().toString(),
+        did: keypair.toDid().didString,
         nodes: clients.length,
         encryption: client._options.key?.constructor.name ?? "none",
       },
@@ -143,8 +142,8 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    * Reads the user's profile information from the cluster.
    */
   async readProfile(): Promise<ReadUserProfileResponse> {
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.mintInvocation({
         command: NucCmd.nil.db.users.root,
         audience: client.id,
       });
@@ -169,16 +168,15 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     const nodePayloads = await prepareRequest({ key, clients, body });
 
     // 2. Execute on all nodes, looking up the payload by node id.
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const envelop = NucTokenEnvelopeSchema.parse(delegation);
-      const token = NucTokenBuilder.extending(envelop)
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const envelope = Codec.decodeBase64Url(delegation);
+      const token = await Builder.invocationFrom(envelope)
         .audience(client.id)
-        .command(NucCmd.nil.db.data.create)
+        .command(NucCmd.nil.db.data.create as Command)
         .expiresAt(intoSecondsFromNow(60))
-        .body(new InvocationBody({}))
-        .build(this.keypair.privateKey());
+        .signAndSerialize(this.keypair.signer());
 
-      const id = Did.parse(client.id.toString());
+      const id = client.id.didString;
       const payload = nodePayloads[id];
       return client.createOwnedData(token, payload);
     });
@@ -200,8 +198,8 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    * Lists references to all data documents owned by the user.
    */
   async listDataReferences(): Promise<ListDataReferencesResponse> {
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.mintInvocation({
         command: NucCmd.nil.db.users.read,
         audience: client.id,
       });
@@ -223,8 +221,8 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    */
   async readData(params: ReadDataRequestParams): Promise<ReadDataResponse> {
     // 1. Fetch the raw data from all nodes.
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.mintInvocation({
         command: NucCmd.nil.db.users.read,
         audience: client.id,
       });
@@ -264,8 +262,8 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   async deleteData(
     params: DeleteDocumentRequestParams,
   ): Promise<ByNodeName<DeleteDocumentResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.mintInvocation({
         command: NucCmd.nil.db.users.delete,
         audience: client.id,
       });
@@ -290,8 +288,8 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   async grantAccess(
     body: GrantAccessToDataRequest,
   ): Promise<ByNodeName<GrantAccessToDataResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.mintInvocation({
         command: NucCmd.nil.db.users.update,
         audience: client.id,
       });
@@ -317,8 +315,8 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   async revokeAccess(
     body: RevokeAccessToDataRequest,
   ): Promise<ByNodeName<RevokeAccessToDataResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.mintInvocation({
         command: NucCmd.nil.db.users.update,
         audience: client.id,
       });
@@ -339,16 +337,14 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   }
 
   private mintInvocation(options: {
-    command: Command;
+    command: string;
     audience: NucDid;
-  }): string {
-    const builder = NucTokenBuilder.invocation({});
-
-    return builder
-      .command(options.command)
+  }): Promise<string> {
+    return Builder.invocation()
+      .command(options.command as Command)
       .subject(this.did)
       .audience(options.audience)
       .expiresAt(intoSecondsFromNow(60))
-      .build(this.keypair.privateKey());
+      .signAndSerialize(this.keypair.signer());
   }
 }

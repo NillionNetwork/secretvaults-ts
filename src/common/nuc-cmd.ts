@@ -1,14 +1,11 @@
-import { Command } from "@nillion/nuc";
-
 function createNucNamespace(prefix: string) {
-  const base = prefix.split("/");
   return {
-    root: new Command([...base]),
-    create: new Command([...base, "create"]),
-    read: new Command([...base, "read"]),
-    update: new Command([...base, "update"]),
-    delete: new Command([...base, "delete"]),
-    execute: new Command([...base, "execute"]),
+    root: `/${prefix}`,
+    create: `/${prefix}/create`,
+    read: `/${prefix}/read`,
+    update: `/${prefix}/update`,
+    delete: `/${prefix}/delete`,
+    execute: `/${prefix}/execute`,
   };
 }
 
@@ -29,7 +26,7 @@ function createNucNamespace(prefix: string) {
 export const NucCmd = {
   nil: {
     db: {
-      root: new Command(["nil", "db"]),
+      root: "/nil/db",
       system: createNucNamespace("nil/db/system"),
       builders: createNucNamespace("nil/db/builders"),
       data: createNucNamespace("nil/db/data"),

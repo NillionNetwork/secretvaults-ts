@@ -1,9 +1,8 @@
 import { faker } from "@faker-js/faker";
-import { Keypair, NucTokenBuilder } from "@nillion/nuc";
+import { Builder, type Command, Keypair, NilauthClient } from "@nillion/nuc";
 import { describe } from "vitest";
 import { SecretVaultBuilderClient } from "#/builder";
 import { NucCmd } from "#/common/nuc-cmd";
-import type { Did, Uuid } from "#/common/types";
 import { intoSecondsFromNow, pause } from "#/common/utils";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import collection from "./data/owned.collection.json";
@@ -13,8 +12,8 @@ import { createFixture } from "./fixture/fixture";
 describe("owned-data.test.ts", () => {
   const { test, beforeAll, afterAll } = createFixture();
 
-  collection._id = faker.string.uuid() as Uuid;
-  query._id = faker.string.uuid() as Uuid;
+  collection._id = faker.string.uuid();
+  query._id = faker.string.uuid();
   const record = {
     _id: faker.string.uuid(),
     name: faker.person.fullName(),
@@ -23,26 +22,36 @@ describe("owned-data.test.ts", () => {
   let otherBuilder: SecretVaultBuilderClient;
 
   beforeAll(async (c) => {
-    const { builder, env, payer } = c;
+    const { builder, env, payer, log } = c;
 
     await builder.register({
-      did: builder.did.toString() as Did,
+      did: builder.did.didString,
       name: faker.company.name(),
     });
 
+    const otherBuilderKeypair = Keypair.generate();
+    const otherNilauth = await NilauthClient.create({
+      baseUrl: env.urls.auth,
+    });
     otherBuilder = await SecretVaultBuilderClient.from({
-      keypair: Keypair.generate(),
-      urls: env.urls,
+      keypair: otherBuilderKeypair,
+      dbs: env.urls.dbs,
+      nilauthClient: otherNilauth,
     });
 
-    await payer.nilauth.payAndValidate(
-      otherBuilder.keypair.publicKey("hex"),
+    log.info(
+      { did: otherBuilder.did.didString },
+      "Paying for otherBuilder subscription",
+    );
+    await payer.nilauth.paySubscription(
+      Keypair.from(process.env.APP_NILCHAIN_PRIVATE_KEY_0!),
+      otherBuilder.did,
       "nildb",
     );
     await otherBuilder.refreshRootToken();
 
     await otherBuilder.register({
-      did: otherBuilder.did.toString() as Did,
+      did: otherBuilder.did.didString,
       name: faker.company.name(),
     });
   });
@@ -65,7 +74,7 @@ describe("owned-data.test.ts", () => {
   test("read owned collection metadata with schema", async ({ c }) => {
     const { builder, expect } = c;
 
-    const result = await builder.readCollection(collection._id as Uuid);
+    const result = await builder.readCollection(collection._id);
 
     expect(result.data._id).toBe(collection._id);
     expect(result.data.count).toBeGreaterThanOrEqual(0);
@@ -88,16 +97,16 @@ describe("owned-data.test.ts", () => {
   test("user can upload data", async ({ c }) => {
     const { builder, user, expect } = c;
 
-    const delegation = NucTokenBuilder.extending(builder.rootToken)
-      .command(NucCmd.nil.db.data.create)
+    const delegation = await Builder.delegationFrom(builder.rootToken)
+      .command(NucCmd.nil.db.data.create as Command)
       .audience(user.did)
       .expiresAt(intoSecondsFromNow(60))
-      .build(builder.keypair.privateKey());
+      .signAndSerialize(builder.keypair.signer());
 
     const results = await user.createData(delegation, {
-      owner: user.did.toString() as Did,
+      owner: user.did.didString,
       acl: {
-        grantee: builder.did.toString() as Did,
+        grantee: builder.did.didString,
         read: true,
         write: false,
         execute: true,
@@ -142,7 +151,7 @@ describe("owned-data.test.ts", () => {
       collection: collection._id,
       document: record._id,
       acl: {
-        grantee: otherBuilder.did.toString() as Did,
+        grantee: otherBuilder.did.didString,
         read: true,
         write: false,
         execute: false,
@@ -157,7 +166,7 @@ describe("owned-data.test.ts", () => {
 
     // Assert against the single, unified response's ACL
     const otherBuilderAcl = dataResult.data._acl.find(
-      (acl) => acl.grantee === otherBuilder.did.toString(),
+      (acl) => acl.grantee === otherBuilder.did.didString,
     );
 
     expect(otherBuilderAcl).toBeDefined();
@@ -174,7 +183,7 @@ describe("owned-data.test.ts", () => {
       collection: collection._id,
       document: record._id,
       acl: {
-        grantee: otherBuilder.did.toString() as Did,
+        grantee: otherBuilder.did.didString,
         read: true,
         write: true,
         execute: false,
@@ -183,7 +192,7 @@ describe("owned-data.test.ts", () => {
 
     // revoke access to otherBuilder
     await user.revokeAccess({
-      grantee: otherBuilder.did.toString() as Did,
+      grantee: otherBuilder.did.didString,
       collection: collection._id,
       document: record._id,
     });
@@ -195,7 +204,7 @@ describe("owned-data.test.ts", () => {
     });
 
     const otherBuilderAcl = result.data._acl.find(
-      (acl) => acl.grantee === otherBuilder.did.toString(),
+      (acl) => acl.grantee === otherBuilder.did.didString,
     );
     expect(otherBuilderAcl).toBeUndefined();
   });
@@ -204,7 +213,7 @@ describe("owned-data.test.ts", () => {
     const { user, expect } = c;
     const result = await user.readProfile();
 
-    expect(result.data._id).toBe(user.did.toString());
+    expect(result.data._id).toBe(user.did.didString);
     expect(result.data.logs).toHaveLength(5);
   });
 

@@ -154,28 +154,27 @@ async function buildContext(
     keypair: Keypair.generate(),
   });
 
-  const builder = await SecretVaultBuilderClient.from({
-    keypair: Keypair.generate(),
-    urls: {
-      chain: nilchainUrl,
-      auth: nilauthUrl,
-      dbs: nildbNodesUrls,
-    },
-    blindfold: {
-      operation: "store",
-    },
-  });
-
-  const payer = await new PayerBuilder()
-    .keypair(Keypair.from(secretKey))
+  const payer = await PayerBuilder.fromKeypair(Keypair.from(secretKey))
     .chainUrl(nilchainUrl)
     .build();
-  const nilauth = await NilauthClient.from(nilauthUrl, payer);
+  const nilauth = await NilauthClient.create({
+    baseUrl: nilauthUrl,
+    payer,
+  });
+
+  const builder = await SecretVaultBuilderClient.from({
+    keypair: Keypair.generate(),
+    dbs: nildbNodesUrls,
+    nilauthClient: nilauth,
+  });
 
   if (options.activateBuilderSubscription) {
-    const publicKey = builder.keypair.publicKey("hex");
-    log.info({ publicKey }, "Renewing subscription");
-    await nilauth.payAndValidate(publicKey, "nildb");
+    log.info({ did: builder.did.didString }, "Renewing subscription");
+    await nilauth.paySubscription(
+      Keypair.from(secretKey),
+      builder.did,
+      "nildb",
+    );
     await builder.refreshRootToken();
   }
 

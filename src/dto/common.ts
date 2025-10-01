@@ -1,5 +1,20 @@
 import { z } from "zod";
-import { Did } from "#/common/types";
+
+/**
+ *
+ */
+export type ByNodeName<T> = Record<string, T>;
+
+/**
+ * UUID string type.
+ */
+export type Uuid = string;
+
+/**
+ *
+ */
+export const DidString = z.string().startsWith("did:");
+export type DidString = z.infer<typeof DidString>;
 
 /**
  *
@@ -36,7 +51,7 @@ export type ByIdRequestParams = z.infer<typeof ByIdRequestParams>;
  * Access control list entry.
  */
 export const Acl = z.object({
-  grantee: Did,
+  grantee: DidString,
   read: z.boolean(),
   write: z.boolean(),
   execute: z.boolean(),

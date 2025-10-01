@@ -51,7 +51,7 @@ function getInitialLogLevel(): LogLevel {
   const sources = [
     process.env?.[LOG_LEVEL_KEY],
     safeStorage.getItem(LOG_LEVEL_KEY),
-    // @ts-ignore
+    // @ts-expect-error
     globalThis[LOG_LEVEL_KEY],
   ];
 

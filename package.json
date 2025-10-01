@@ -25,9 +25,7 @@
   },
   "dependencies": {
     "es-toolkit": "^1.39.8",
-    "zod": "^4.1.11"
-  },
-  "peerDependencies": {
+    "zod": "^4.1.11",
     "@nillion/blindfold": "0.1.0",
     "@nillion/nuc": "1.0.0-rc.1",
     "pino": "^9.7.0",

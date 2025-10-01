@@ -1,7 +1,7 @@
 import { type ClusterKey, encrypt, type SecretKey } from "@nillion/blindfold";
 import { isPlainObject } from "es-toolkit";
 import { reveal } from "#/common/blindfold";
-import type { ByNodeName, Did } from "#/common/types";
+import type { ByNodeName, DidString } from "#/dto/common";
 import { Log } from "#/logger";
 import type { NilDbBaseClient } from "#/nildb/base-client";
 
@@ -14,8 +14,8 @@ export async function executeOnCluster<Client extends NilDbBaseClient, T>(
 ): Promise<ByNodeName<T>> {
   Log.debug({ nodes: nodes.length }, "Executing cluster operation");
 
-  const promises = nodes.map(async (client, index): Promise<[Did, T]> => {
-    const node = client.id.toString() as Did;
+  const promises = nodes.map(async (client, index): Promise<[DidString, T]> => {
+    const node = client.id.didString as DidString;
     Log.debug({ node, index }, "Starting node operation");
 
     try {
@@ -28,8 +28,8 @@ export async function executeOnCluster<Client extends NilDbBaseClient, T>(
 
   const results = await Promise.allSettled(promises);
 
-  const successes: [Did, T][] = [];
-  const failures: { node: Did; error: unknown }[] = [];
+  const successes: [DidString, T][] = [];
+  const failures: { node: DidString; error: unknown }[] = [];
 
   for (const result of results) {
     if (result.status === "fulfilled") {
@@ -225,7 +225,6 @@ export async function prepareRequest<
       }
     }
 
-    // @ts-expect-error correcting types requires out of scope wider refactor
     result[client.id.toString()] = bodyCopy;
   });
 

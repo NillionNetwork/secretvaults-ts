@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
-import type { Uuid } from "#/common/types";
 import {
   DeleteBuilderResponse,
   ReadBuilderProfileResponse,
@@ -19,7 +18,7 @@ import {
   ListCollectionsResponse,
   ReadCollectionMetadataResponse,
 } from "#/dto/collections.dto";
-import type { Name } from "#/dto/common";
+import type { Name, Uuid } from "#/dto/common";
 import {
   CreateDataResponse,
   type CreateStandardDataRequest,
@@ -56,14 +55,6 @@ export type NilDbBuilderClientOptions = z.infer<
  *
  */
 export class NilDbBuilderClient extends NilDbBaseClient {
-  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: currently unused but useful to keep
-  #options: NilDbBuilderClientOptions;
-
-  constructor(options: NilDbBuilderClientOptions) {
-    super(options);
-    this.#options = options;
-  }
-
   /**
    * Registers a new builder.
    */

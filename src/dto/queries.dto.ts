@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ApiSuccessResponse } from "./common";
+import { ApiSuccessResponse, DidString } from "./common";
 
 /**
  * MongoDB aggregation pipeline variable validation.
@@ -43,6 +43,9 @@ export type CreateQueryResponse = z.infer<typeof CreateQueryResponse>;
  */
 const QueryDocumentResponse = z.object({
   _id: z.uuid(),
+  _created: z.iso.datetime(),
+  _updated: z.iso.datetime(),
+  owner: DidString,
   name: z.string().min(1).max(100),
   collection: z.uuid(),
 });

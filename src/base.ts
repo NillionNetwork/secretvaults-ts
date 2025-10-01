@@ -1,8 +1,8 @@
 import type { ClusterKey, SecretKey } from "@nillion/blindfold";
-import type { Keypair, Did as NucDid } from "@nillion/nuc";
+import type { Did, Keypair } from "@nillion/nuc";
+import type { ByNodeName } from "#/dto/common";
+import type { ReadAboutNodeResponse } from "#/dto/system.dto";
 import { executeOnCluster } from "./common/cluster";
-import type { ByNodeName } from "./common/types";
-import type { ReadAboutNodeResponse } from "./dto/system.dto";
 import { Log } from "./logger";
 import type { NilDbBaseClient } from "./nildb/base-client";
 
@@ -26,13 +26,13 @@ export class SecretVaultBaseClient<TClient extends NilDbBaseClient> {
   }
 
   get id(): string {
-    return this.did.toString();
+    return this.did.didString;
   }
 
   /**
    * The DID of the keypair associated with this client.
    */
-  get did(): NucDid {
+  get did(): Did {
     return this._options.keypair.toDid();
   }
 
