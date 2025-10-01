@@ -27,7 +27,13 @@ import type {
   ListCollectionsResponse,
   ReadCollectionMetadataResponse,
 } from "#/dto/collections.dto";
-import type { ByNodeName, DidString, Name, Uuid } from "#/dto/common";
+import type {
+  ByNodeName,
+  DidString,
+  Name,
+  PaginationQuery,
+  Uuid,
+} from "#/dto/common";
 import type {
   CreateDataResponse,
   CreateStandardDataRequest,
@@ -311,14 +317,16 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Reads a list of all collections from the cluster.
    */
-  async readCollections(): Promise<ListCollectionsResponse> {
+  async readCollections(
+    pagination?: PaginationQuery,
+  ): Promise<ListCollectionsResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.collections.read,
       });
 
-      return client.readCollections(token);
+      return client.readCollections(token, pagination);
     });
 
     const result = processPlaintextResponse(resultsByNode);
@@ -472,17 +480,22 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Retrieves a list of all saved queries.
    */
-  async getQueries(): Promise<ByNodeName<ReadQueriesResponse>> {
-    const result = await executeOnCluster(this.nodes, async (client) => {
+  async getQueries(pagination?: PaginationQuery): Promise<ReadQueriesResponse> {
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.mintRootInvocation({
         audience: client.id,
         command: NucCmd.nil.db.queries.read,
       });
 
-      return client.getQueries(token);
+      return client.getQueries(token, pagination);
     });
 
-    Log.info({ builder: this.id }, "Queries read");
+    const result = processPlaintextResponse(resultsByNode);
+
+    Log.info(
+      { builder: this.id, count: result.data?.length || 0 },
+      "Queries read",
+    );
     return result;
   }
 
@@ -608,7 +621,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     if (key) {
       const data = await processConcealedListResponse({ key, resultsByNode });
-      result = { data };
+      const firstResponse = Object.values(resultsByNode)[0];
+      result = {
+        data,
+        pagination: firstResponse.pagination,
+      };
     } else {
       result = processPlaintextResponse(resultsByNode);
     }

@@ -123,13 +123,53 @@ describe("owned-data.test.ts", () => {
     }
   });
 
-  test("user can list data references", async ({ c }) => {
+  test("user can list data references with default pagination", async ({
+    c,
+  }) => {
     const { user, expect } = c;
 
-    // Assert against the single, unified response
     const result = await user.listDataReferences();
     expect(result.data).toHaveLength(1);
     expect(result.data.at(0)?.document).toBe(record._id);
+    expect(result.pagination.total).toBe(1);
+    expect(result.pagination.limit).toBe(25);
+    expect(result.pagination.offset).toBe(0);
+  });
+
+  test("user can list data references with explicit pagination", async ({
+    c,
+  }) => {
+    const { user, builder, expect } = c;
+
+    // Create more data to test pagination
+    const delegation = await Builder.delegationFrom(builder.rootToken)
+      .command(NucCmd.nil.db.data.create as Command)
+      .audience(user.did)
+      .expiresAt(intoSecondsFromNow(60))
+      .signAndSerialize(builder.keypair.signer());
+
+    const moreData = Array.from({ length: 5 }, () => ({
+      _id: faker.string.uuid(),
+      name: faker.person.fullName(),
+    }));
+
+    await user.createData(delegation, {
+      owner: user.did.didString,
+      acl: {
+        grantee: builder.did.didString,
+        read: true,
+        write: false,
+        execute: false,
+      },
+      collection: collection._id,
+      data: moreData,
+    });
+
+    const result = await user.listDataReferences({ limit: 2, offset: 1 });
+    expect(result.data).toHaveLength(2);
+    expect(result.pagination.total).toBe(6);
+    expect(result.pagination.limit).toBe(2);
+    expect(result.pagination.offset).toBe(1);
   });
 
   test("user can retrieve their own data by id", async ({ c }) => {
@@ -214,19 +254,28 @@ describe("owned-data.test.ts", () => {
     const result = await user.readProfile();
 
     expect(result.data._id).toBe(user.did.didString);
-    expect(result.data.logs).toHaveLength(5);
+    // Profile contains logs from all operations in test suite
+    // Including: create-data (1 + 5), auth (2)
+    expect(result.data.logs.length).toBeGreaterThanOrEqual(5);
+    expect(result.data.data).toHaveLength(6);
   });
 
   test("user can delete their data", async ({ c }) => {
     const { user, expect, db } = c;
 
-    // delete data record
-    await user.deleteData({
-      collection: collection._id,
-      document: record._id,
-    });
+    // Get all user data references
+    const allDataRefs = await user.listDataReferences();
+    expect(allDataRefs.data).toHaveLength(6);
 
-    // since it was the user's only record the user should have been removed from the db
+    // Delete all data records
+    for (const ref of allDataRefs.data) {
+      await user.deleteData({
+        collection: ref.collection,
+        document: ref.document,
+      });
+    }
+
+    // Since we deleted all user's records, the user should have been removed from the db
     const users = await db.db("nildb-1").collection("users").find({}).toArray();
     expect(users).toHaveLength(0);
   });

@@ -18,7 +18,7 @@ import {
   ListCollectionsResponse,
   ReadCollectionMetadataResponse,
 } from "#/dto/collections.dto";
-import type { Name, Uuid } from "#/dto/common";
+import type { Name, PaginationQuery, Uuid } from "#/dto/common";
 import {
   CreateDataResponse,
   type CreateStandardDataRequest,
@@ -125,9 +125,28 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Lists all collections owned by the authenticated builder.
    */
-  readCollections(token: string): Promise<ListCollectionsResponse> {
+  readCollections(
+    token: string,
+    pagination?: PaginationQuery,
+  ): Promise<ListCollectionsResponse> {
+    let path: string = NilDbEndpoint.v1.collections.root;
+    if (pagination) {
+      const params = new URLSearchParams();
+      if (pagination.limit !== undefined) {
+        params.set("limit", String(pagination.limit));
+      }
+      if (pagination.offset !== undefined) {
+        params.set("offset", String(pagination.offset));
+      }
+      if (pagination.sort) {
+        for (const [key, value] of Object.entries(pagination.sort)) {
+          params.append(`sort[${key}]`, String(value));
+        }
+      }
+      path = `${path}?${params.toString()}`;
+    }
     return this.request({
-      path: NilDbEndpoint.v1.collections.root,
+      path,
       method: "GET",
       token,
       responseSchema: ListCollectionsResponse,
@@ -202,9 +221,28 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Lists all queries owned by the authenticated builder.
    */
-  getQueries(token: string): Promise<ReadQueriesResponse> {
+  getQueries(
+    token: string,
+    pagination?: PaginationQuery,
+  ): Promise<ReadQueriesResponse> {
+    let path: string = NilDbEndpoint.v1.queries.root;
+    if (pagination) {
+      const params = new URLSearchParams();
+      if (pagination.limit !== undefined) {
+        params.set("limit", String(pagination.limit));
+      }
+      if (pagination.offset !== undefined) {
+        params.set("offset", String(pagination.offset));
+      }
+      if (pagination.sort) {
+        for (const [key, value] of Object.entries(pagination.sort)) {
+          params.append(`sort[${key}]`, String(value));
+        }
+      }
+      path = `${path}?${params.toString()}`;
+    }
     return this.request({
-      path: NilDbEndpoint.v1.queries.root,
+      path,
       token,
       responseSchema: ReadQueriesResponse,
     });

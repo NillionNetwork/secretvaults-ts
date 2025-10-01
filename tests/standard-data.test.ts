@@ -123,6 +123,53 @@ describe("standard-data.test.ts", () => {
     expect(results.data.at(0)?.name).toBe("a");
   });
 
+  test("can list queries with pagination", async ({ c }) => {
+    const { builder, expect } = c;
+
+    // Create a few extra queries to test pagination
+    for (let i = 0; i < 5; i++) {
+      await builder.createQuery({
+        _id: crypto.randomUUID(),
+        name: `Pagination Test Query ${i}`,
+        collection: collection._id,
+        variables: {},
+        pipeline: [{ $match: {} }],
+      });
+    }
+
+    const paginatedResult = await builder.getQueries({ limit: 2, offset: 3 });
+    expect(paginatedResult.data).toHaveLength(2);
+    expect(paginatedResult.pagination.total).toBe(5);
+    expect(paginatedResult.pagination.limit).toBe(2);
+    expect(paginatedResult.pagination.offset).toBe(3);
+    expect(paginatedResult.data[0].name).toContain("Pagination Test Query");
+  });
+
+  test("can find data with pagination", async ({ c }) => {
+    const { builder, expect } = c;
+
+    // Ensure there is enough data
+    const moreData = Array.from({ length: 4 }, () => ({
+      _id: crypto.randomUUID(),
+      name: "find-data-pagination-test",
+    }));
+    await builder.createStandardData({
+      body: { collection: collection._id, data: moreData },
+    });
+    // Total data count is now 5 (1 from initial upload + 4 here)
+
+    const result = await builder.findData({
+      collection: collection._id,
+      filter: { name: "find-data-pagination-test" },
+      pagination: { limit: 2, offset: 1 },
+    });
+
+    expect(result.data).toHaveLength(2);
+    expect(result.pagination.total).toBe(4);
+    expect(result.pagination.limit).toBe(2);
+    expect(result.pagination.offset).toBe(1);
+  });
+
   test("create and run query", async ({ c }) => {
     const { builder, expect } = c;
 

@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { ApiSuccessResponse, DidString } from "./common";
+import {
+  ApiSuccessResponse,
+  DidString,
+  PaginatedResponse,
+  PaginationBodySchema,
+} from "./common";
 import { AclDto } from "./users.dto";
 
 /**
@@ -70,14 +75,15 @@ export type UpdateDataResponse = z.infer<typeof UpdateDataResponse>;
 export const FindDataRequest = z.object({
   collection: z.uuid(),
   filter: z.record(z.string(), z.unknown()),
+  ...PaginationBodySchema.shape,
 });
 export type FindDataRequest = z.infer<typeof FindDataRequest>;
 
 /**
  * Data find response.
  */
-export const FindDataResponse = ApiSuccessResponse(
-  z.array(z.record(z.string(), z.unknown())),
+export const FindDataResponse = PaginatedResponse(
+  z.record(z.string(), z.unknown()),
 );
 export type FindDataResponse = z.infer<typeof FindDataResponse>;
 

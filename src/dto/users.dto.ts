@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { ApiSuccessResponse, DidString } from "./common";
+import {
+  ApiSuccessResponse,
+  DidString,
+  PaginatedResponse,
+  PaginationQuerySchema,
+} from "./common";
 
 /**
  * Access control list entry.
@@ -73,10 +78,18 @@ const DataDocumentReference = z.object({
 });
 
 /**
+ * User data references list request query parameters.
+ */
+export const ListDataReferencesRequestQuery = PaginationQuerySchema;
+export type ListDataReferencesRequestQuery = z.infer<
+  typeof ListDataReferencesRequestQuery
+>;
+
+/**
  * User data references response.
  */
-export const ListDataReferencesResponse = ApiSuccessResponse(
-  z.array(DataDocumentReference),
+export const ListDataReferencesResponse = PaginatedResponse(
+  DataDocumentReference,
 );
 
 export type ListDataReferencesResponse = z.infer<

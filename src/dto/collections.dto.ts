@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { ApiSuccessResponse } from "./common";
+import {
+  ApiSuccessResponse,
+  DidString,
+  PaginatedResponse,
+  PaginationQuerySchema,
+} from "./common";
 
 /**
  * Collection document data.
@@ -16,9 +21,17 @@ export const CollectionDocumentDto = z.object({
 export const CollectionDocuments = z.array(CollectionDocumentDto);
 
 /**
+ * Collections list request query parameters.
+ */
+export const ListCollectionsRequestQuery = PaginationQuerySchema;
+export type ListCollectionsRequestQuery = z.infer<
+  typeof ListCollectionsRequestQuery
+>;
+
+/**
  * Collections list response.
  */
-export const ListCollectionsResponse = ApiSuccessResponse(CollectionDocuments);
+export const ListCollectionsResponse = PaginatedResponse(CollectionDocumentDto);
 export type ListCollectionsResponse = z.infer<typeof ListCollectionsResponse>;
 
 /**

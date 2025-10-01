@@ -6,20 +6,7 @@ import {
   type Did as NucDid,
 } from "@nillion/nuc";
 import { SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
-import { Log } from "#/logger";
-import {
-  type BlindfoldFactoryConfig,
-  toBlindfoldKey,
-} from "./common/blindfold";
-import {
-  executeOnCluster,
-  prepareRequest,
-  processConcealedObjectResponse,
-  processPlaintextResponse,
-} from "./common/cluster";
-import { NucCmd } from "./common/nuc-cmd";
-import { intoSecondsFromNow } from "./common/utils";
-import type { ByNodeName } from "#/dto/common";
+import type { ByNodeName, PaginationQuery } from "#/dto/common";
 import type {
   CreateDataResponse,
   CreateOwnedDataRequest,
@@ -36,6 +23,19 @@ import type {
   RevokeAccessToDataRequest,
   RevokeAccessToDataResponse,
 } from "#/dto/users.dto";
+import { Log } from "#/logger";
+import {
+  type BlindfoldFactoryConfig,
+  toBlindfoldKey,
+} from "./common/blindfold";
+import {
+  executeOnCluster,
+  prepareRequest,
+  processConcealedObjectResponse,
+  processPlaintextResponse,
+} from "./common/cluster";
+import { NucCmd } from "./common/nuc-cmd";
+import { intoSecondsFromNow } from "./common/utils";
 import {
   createNilDbUserClient,
   type NilDbUserClient,
@@ -51,7 +51,7 @@ export type SecretVaultUserOptions = SecretVaultBaseOptions<NilDbUserClient>;
  * handling of concealed data when configured with blindfold.
  *
  * @example
- * ```typescript
+ * ```ts
  * const client = await SecretVaultUserClient.from({
  *   keypair: myKeypair,
  *   baseUrls: [
@@ -74,7 +74,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    * @returns A promise that resolves to a configured SecretVaultUserClient
    *
    * @example
-   * ```typescript
+   * ```ts
    * const client = await SecretVaultUserClient.from({
    *   keypair: myKeypair,
    *   baseUrls: [
@@ -197,13 +197,15 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Lists references to all data documents owned by the user.
    */
-  async listDataReferences(): Promise<ListDataReferencesResponse> {
+  async listDataReferences(
+    pagination?: PaginationQuery,
+  ): Promise<ListDataReferencesResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.mintInvocation({
         command: NucCmd.nil.db.users.read,
         audience: client.id,
       });
-      return client.listDataReferences(token);
+      return client.listDataReferences(token, pagination);
     });
 
     const result = processPlaintextResponse(resultsByNode);

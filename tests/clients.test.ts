@@ -1,7 +1,7 @@
 import * as crypto from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
-import type { DidString, Uuid } from "#/dto/common";
+import type { DidString } from "#/dto/common";
 import collectionJson from "./data/owned.collection.json";
 import queryJson from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -9,8 +9,8 @@ import { createFixture } from "./fixture/fixture";
 describe("clients.test.ts", () => {
   const { test, beforeAll, afterAll } = createFixture();
 
-  collectionJson._id = crypto.randomUUID().toString() as Uuid;
-  queryJson._id = crypto.randomUUID().toString() as Uuid;
+  collectionJson._id = crypto.randomUUID().toString();
+  queryJson._id = crypto.randomUUID().toString();
 
   let nildbAId: DidString;
   let nildbBId: DidString;
