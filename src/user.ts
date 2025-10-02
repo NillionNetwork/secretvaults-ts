@@ -5,7 +5,11 @@ import {
   type Keypair,
   type Did as NucDid,
 } from "@nillion/nuc";
-import { SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
+import {
+  type AuthContext,
+  SecretVaultBaseClient,
+  type SecretVaultBaseOptions,
+} from "#/base";
 import type { ByNodeName, PaginationQuery } from "#/dto/common";
 import type {
   CreateDataResponse,
@@ -42,6 +46,13 @@ import {
 } from "./nildb/user-client";
 
 export type SecretVaultUserOptions = SecretVaultBaseOptions<NilDbUserClient>;
+
+/**
+ * A specific AuthContext for createData, which requires a delegation or invocation.
+ */
+export type CreateDataAuthContext =
+  | { delegation: string; invocation?: never }
+  | { invocation: string; delegation?: never };
 
 /**
  * Client for user operations on SecretVaults.
@@ -141,9 +152,10 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Reads the user's profile information from the cluster.
    */
-  async readProfile(): Promise<ReadUserProfileResponse> {
+  async readProfile(auth?: AuthContext): Promise<ReadUserProfileResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
-      const token = await this.mintInvocation({
+      const token = await this.getInvocationFor({
+        auth,
         command: NucCmd.nil.db.users.root,
         audience: client.id,
       });
@@ -159,8 +171,8 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    * Creates one or more data documents owned by the user.
    */
   async createData(
-    delegation: string,
     body: CreateOwnedDataRequest,
+    auth: CreateDataAuthContext,
   ): Promise<ByNodeName<CreateDataResponse>> {
     const { key, clients } = this._options;
 
@@ -169,12 +181,18 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     // 2. Execute on all nodes, looking up the payload by node id.
     const result = await executeOnCluster(this.nodes, async (client) => {
-      const envelope = Codec.decodeBase64Url(delegation);
-      const token = await Builder.invocationFrom(envelope)
-        .audience(client.id)
-        .command(NucCmd.nil.db.data.create as Command)
-        .expiresAt(intoSecondsFromNow(60))
-        .signAndSerialize(this.keypair.signer());
+      let token: string;
+      if ("invocation" in auth && typeof auth.invocation === "string") {
+        token = auth.invocation;
+      } else {
+        // TypeScript knows this is the `delegation` case
+        const envelope = Codec.decodeBase64Url(auth.delegation);
+        token = await Builder.invocationFrom(envelope)
+          .audience(client.id)
+          .command(NucCmd.nil.db.data.create as Command)
+          .expiresAt(intoSecondsFromNow(60))
+          .signAndSerialize(this.keypair.signer());
+      }
 
       const id = client.id.didString;
       const payload = nodePayloads[id];
@@ -199,9 +217,11 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    */
   async listDataReferences(
     pagination?: PaginationQuery,
+    auth?: AuthContext,
   ): Promise<ListDataReferencesResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
-      const token = await this.mintInvocation({
+      const token = await this.getInvocationFor({
+        auth,
         command: NucCmd.nil.db.users.read,
         audience: client.id,
       });
@@ -221,10 +241,14 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Reads a single data document, automatically revealing concealed values if a key is configured.
    */
-  async readData(params: ReadDataRequestParams): Promise<ReadDataResponse> {
+  async readData(
+    params: ReadDataRequestParams,
+    auth?: AuthContext,
+  ): Promise<ReadDataResponse> {
     // 1. Fetch the raw data from all nodes.
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
-      const token = await this.mintInvocation({
+      const token = await this.getInvocationFor({
+        auth,
         command: NucCmd.nil.db.users.read,
         audience: client.id,
       });
@@ -263,9 +287,11 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    */
   async deleteData(
     params: DeleteDocumentRequestParams,
+    auth?: AuthContext,
   ): Promise<ByNodeName<DeleteDocumentResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
-      const token = await this.mintInvocation({
+      const token = await this.getInvocationFor({
+        auth,
         command: NucCmd.nil.db.users.delete,
         audience: client.id,
       });
@@ -289,9 +315,11 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    */
   async grantAccess(
     body: GrantAccessToDataRequest,
+    auth?: AuthContext,
   ): Promise<ByNodeName<GrantAccessToDataResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
-      const token = await this.mintInvocation({
+      const token = await this.getInvocationFor({
+        auth,
         command: NucCmd.nil.db.users.update,
         audience: client.id,
       });
@@ -316,9 +344,11 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    */
   async revokeAccess(
     body: RevokeAccessToDataRequest,
+    auth?: AuthContext,
   ): Promise<ByNodeName<RevokeAccessToDataResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
-      const token = await this.mintInvocation({
+      const token = await this.getInvocationFor({
+        auth,
         command: NucCmd.nil.db.users.update,
         audience: client.id,
       });
@@ -338,15 +368,35 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     return result;
   }
 
-  private mintInvocation(options: {
+  private getInvocationFor(options: {
+    auth?: AuthContext;
     command: string;
     audience: NucDid;
   }): Promise<string> {
+    const { auth, command, audience } = options;
+
+    if (auth?.invocation) {
+      return Promise.resolve(auth.invocation);
+    }
+
+    const signer = auth?.signer ?? this.keypair.signer();
+    const expiresAt = intoSecondsFromNow(60);
+
+    if (auth?.delegation) {
+      const envelope = Codec.decodeBase64Url(auth.delegation);
+      return Builder.invocationFrom(envelope)
+        .audience(audience)
+        .command(command as Command)
+        .expiresAt(expiresAt)
+        .signAndSerialize(signer);
+    }
+
+    // Fallback to self-signed invocation
     return Builder.invocation()
-      .command(options.command as Command)
+      .command(command as Command)
       .subject(this.did)
-      .audience(options.audience)
-      .expiresAt(intoSecondsFromNow(60))
-      .signAndSerialize(this.keypair.signer());
+      .audience(audience)
+      .expiresAt(expiresAt)
+      .signAndSerialize(signer);
   }
 }

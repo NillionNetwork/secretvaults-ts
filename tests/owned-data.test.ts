@@ -103,17 +103,20 @@ describe("owned-data.test.ts", () => {
       .expiresAt(intoSecondsFromNow(60))
       .signAndSerialize(builder.keypair.signer());
 
-    const results = await user.createData(delegation, {
-      owner: user.did.didString,
-      acl: {
-        grantee: builder.did.didString,
-        read: true,
-        write: false,
-        execute: true,
+    const results = await user.createData(
+      {
+        owner: user.did.didString,
+        acl: {
+          grantee: builder.did.didString,
+          read: true,
+          write: false,
+          execute: true,
+        },
+        collection: collection._id,
+        data: [record],
       },
-      collection: collection._id,
-      data: [record],
-    });
+      { delegation },
+    );
     const pairs = Object.entries(results);
     expect(Object.keys(pairs)).toHaveLength(2);
 
@@ -153,17 +156,20 @@ describe("owned-data.test.ts", () => {
       name: faker.person.fullName(),
     }));
 
-    await user.createData(delegation, {
-      owner: user.did.didString,
-      acl: {
-        grantee: builder.did.didString,
-        read: true,
-        write: false,
-        execute: false,
+    await user.createData(
+      {
+        owner: user.did.didString,
+        acl: {
+          grantee: builder.did.didString,
+          read: true,
+          write: false,
+          execute: false,
+        },
+        collection: collection._id,
+        data: moreData,
       },
-      collection: collection._id,
-      data: moreData,
-    });
+      { delegation },
+    );
 
     const result = await user.listDataReferences({ limit: 2, offset: 1 });
     expect(result.data).toHaveLength(2);

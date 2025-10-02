@@ -60,10 +60,8 @@ describe("standard-data.test.ts", () => {
     ];
 
     const results = await builder.createStandardData({
-      body: {
-        collection: collection._id,
-        data,
-      },
+      collection: collection._id,
+      data,
     });
     const pairs: [string, any][] = Object.entries(results);
 
@@ -154,7 +152,8 @@ describe("standard-data.test.ts", () => {
       name: "find-data-pagination-test",
     }));
     await builder.createStandardData({
-      body: { collection: collection._id, data: moreData },
+      collection: collection._id,
+      data: moreData,
     });
     // Total data count is now 5 (1 from initial upload + 4 here)
 
