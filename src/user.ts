@@ -78,23 +78,27 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Creates and initializes a new SecretVaultUserClient instance.
    *
-   * @param options - Configuration options for the client
-   * @param options.keypair - The user's keypair for authentication
-   * @param options.baseUrls - URL Array of nilDB node endpoints
-   * @param options.blindfold - Optional blindfold configuration for concealed data
-   * @returns A promise that resolves to a configured SecretVaultUserClient
+   * @example
+   * // Basic instantiation with an auto-generated key
+   * const userClient = await SecretVaultUserClient.from({
+   *   keypair: Keypair.generate(),
+   *   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
+   * });
    *
    * @example
-   * ```ts
-   * const client = await SecretVaultUserClient.from({
-   *   keypair: myKeypair,
-   *   baseUrls: [
-   *     'https://nildb-stg-n1.nillion.network',
-   *     'https://nildb-stg-n2.nillion.network',
-   *     'https://nildb-stg-n3.nillion.network',
-   *   ],
+   * // Advanced: Using a custom signer from a browser wallet
+   * import { ethers } from "ethers";
+   * import { Keypair } from "@nillion/nuc";
+   *
+   * const provider = new ethers.BrowserProvider(window.ethereum);
+   * const ethersSigner = await provider.getSigner();
+   * const domain = { name: "NUC", version: "1", chainId: 1 };
+   * const customKeypair = await Keypair.fromEthersSigner(ethersSigner, domain);
+   *
+   * const clientWithSigner = await SecretVaultUserClient.from({
+   *   keypair: customKeypair,
+   *   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
    * });
-   * ```
    */
   static async from(options: {
     keypair: Keypair;

@@ -94,7 +94,7 @@ export type SecretVaultBuilderOptions =
  * automatic handling of concealed data when configured with blindfold.
  *
  * @example
- * ```typescript
+ * ```ts
  * const client = await SecretVaultBuilderClient.from({
  *   keypair: myKeypair,
  *   urls: {
@@ -109,21 +109,29 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Creates and initializes a new SecretVaultBuilderClient instance.
    *
-   * @param options - Configuration options for the client
-   * @param options.keypair - The builder's keypair for authentication
-   * @param options.dbs - URL Array of nilDB node endpoints
-   * @param options.blindfold - Optional blindfold configuration for concealed data
-   * @returns A promise that resolves to a configured SecretVaultBuilderClient
+   * @example
+   * // Basic instantiation with an auto-generated key
+   * const builderClient = await SecretVaultBuilderClient.from({
+   *   keypair: Keypair.generate(),
+   *   nilauthClient,
+   *   dbs: ["http://localhost:40081", "http://localhost:40082"],
+   * });
    *
    * @example
-   * ```typescript
-   * const client = await SecretVaultBuilderClient.from({
-   *   keypair: myKeypair,
-   *   nilauhtClient: myNilAuthClient,
-   *   dbs: ["https://nildb-stg-n1.nillion.network", "https://nildb-stg-n2.nillion.network", "https://nildb-stg-n3.nillion.network"],
-   *   blindfold: { optional blindfold config }
+   * // Advanced: Using a custom signer from a browser wallet
+   * import { ethers } from "ethers";
+   * import { Keypair } from "@nillion/nuc";
+   *
+   * const provider = new ethers.BrowserProvider(window.ethereum);
+   * const ethersSigner = await provider.getSigner();
+   * const domain = { name: "NUC", version: "1", chainId: 1 };
+   * const customKeypair = await Keypair.fromEthersSigner(ethersSigner, domain);
+   *
+   * const clientWithSigner = await SecretVaultBuilderClient.from({
+   *   keypair: customKeypair,
+   *   nilauthClient,
+   *   dbs: ["http://localhost:40081", "http://localhost:40082"],
    * });
-   * ```
    */
   static async from(options: {
     keypair: Keypair;
