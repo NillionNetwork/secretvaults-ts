@@ -5,16 +5,7 @@ import type { ReadQueryRunByIdResponse } from "#/dto/queries.dto";
 import type { FixtureContext } from "./fixture";
 
 export function createTestLogger(): Logger {
-  return pino({
-    transport: {
-      target: "pino-pretty",
-      options: {
-        sync: true,
-        singleLine: true,
-        messageFormat: "fixture - {msg}",
-      },
-    },
-  });
+  return pino();
 }
 
 export function waitForQueryRun(
