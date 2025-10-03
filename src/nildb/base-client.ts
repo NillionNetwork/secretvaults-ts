@@ -122,16 +122,20 @@ export class NilDbBaseClient {
 
         if (!this.isRetryableError(error) || attempt === maxRetries) {
           Log.debug(
-            `${context} failed permanently after ${attempt} attempts: %O`,
-            error,
+            {
+              error,
+            },
+            `${context} failed permanently after ${attempt} attempts`,
           );
           throw error;
         }
 
         const delay = Math.min(1000 * 2 ** (attempt - 1), 10000); // Exponential backoff with max 10s
         Log.debug(
-          `${context} failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms: %O`,
-          error,
+          {
+            error,
+          },
+          `${context} failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms`,
         );
         await pause(delay);
       }

@@ -3,10 +3,10 @@ import {
   Codec,
   type Command,
   type Envelope,
-  type Keypair,
   type NilauthClient,
   type NilauthTypes,
   type Did as NucDid,
+  type Signer,
 } from "@nillion/nuc";
 import {
   type AuthContext,
@@ -112,7 +112,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    * @example
    * // Basic instantiation with an auto-generated key
    * const builderClient = await SecretVaultBuilderClient.from({
-   *   keypair: Keypair.generate(),
+   *   signer: Signer.generate(),
    *   nilauthClient,
    *   dbs: ["http://localhost:40081", "http://localhost:40082"],
    * });
@@ -120,30 +120,31 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    * @example
    * // Advanced: Using a custom signer from a browser wallet
    * import { ethers } from "ethers";
-   * import { Keypair } from "@nillion/nuc";
+   * import { Signer } from "@nillion/nuc";
    *
    * const provider = new ethers.BrowserProvider(window.ethereum);
    * const ethersSigner = await provider.getSigner();
-   * const domain = { name: "NUC", version: "1", chainId: 1 };
-   * const customKeypair = await Keypair.fromEthersSigner(ethersSigner, domain);
+   * const customSigner = await Signer.fromWeb3(ethersSigner);
    *
    * const clientWithSigner = await SecretVaultBuilderClient.from({
-   *   keypair: customKeypair,
+   *   signer: customSigner,
    *   nilauthClient,
    *   dbs: ["http://localhost:40081", "http://localhost:40082"],
    * });
    */
   static async from(options: {
-    keypair: Keypair;
+    signer: Signer;
     nilauthClient: NilauthClient;
     dbs: string[];
     blindfold?: BlindfoldFactoryConfig;
   }): Promise<SecretVaultBuilderClient> {
-    const { dbs: baseUrls, keypair, blindfold, nilauthClient } = options;
+    const { dbs: baseUrls, signer, blindfold, nilauthClient } = options;
+
+    const did = await signer.getDid();
 
     Log.debug(
       {
-        did: keypair.toDid().didString,
+        did: did.didString,
         dbCount: baseUrls.length,
         blindfold: !!blindfold,
       },
@@ -162,7 +163,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
         // User provided a key
         client = new SecretVaultBuilderClient({
           clients,
-          keypair,
+          signer,
           key: blindfold.key,
           nilauthClient,
         });
@@ -175,7 +176,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
         client = new SecretVaultBuilderClient({
           clients,
-          keypair,
+          signer,
           key,
           nilauthClient,
         });
@@ -184,14 +185,15 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       // No encryption
       client = new SecretVaultBuilderClient({
         clients,
-        keypair,
+        signer,
         nilauthClient,
       });
     }
 
+    const clientDid = await client.getDid();
     Log.info(
       {
-        id: keypair.toDid().didString.slice(-8),
+        id: clientDid.didString.slice(-8),
         nodes: clients.length,
         encryption: client._options.key?.constructor.name ?? "none",
       },
@@ -222,22 +224,19 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   async refreshRootToken(): Promise<void> {
     Log.debug("Refreshing root token");
     const response = await this.#nilauthClient.requestToken(
-      this._options.keypair,
+      this._options.signer,
       "nildb",
     );
 
     this.#rootToken = response.token;
-    Log.info({ builder: this.id }, "Root token refreshed");
+    Log.info({ builder: await this.getId() }, "Root token refreshed");
   }
 
   /**
    * Checks subscription status by the builder's Did.
    */
-  subscriptionStatus(): Promise<NilauthTypes.SubscriptionStatusResponse> {
-    return this.#nilauthClient.subscriptionStatus(
-      this.keypair.toDid(),
-      "nildb",
-    );
+  async subscriptionStatus(): Promise<NilauthTypes.SubscriptionStatusResponse> {
+    return this.#nilauthClient.subscriptionStatus(await this.getDid(), "nildb");
   }
 
   /**
@@ -247,7 +246,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     body: RegisterBuilderRequest,
   ): Promise<ByNodeName<RegisterBuilderResponse>> {
     const result = await executeOnCluster(this.nodes, (c) => c.register(body));
-    Log.info({ builder: this.id }, "Builder registered");
+    Log.info({ builder: await this.getId() }, "Builder registered");
     return result;
   }
 
@@ -266,7 +265,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     });
 
     const result = processPlaintextResponse(resultsByNode);
-    Log.info({ builder: this.id }, "Builder profile read");
+    Log.info({ builder: await this.getId() }, "Builder profile read");
     return result;
   }
 
@@ -288,7 +287,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     });
 
     Log.info(
-      { builder: this.id, updateFields: Object.keys(body) },
+      { builder: await this.getId(), updateFields: Object.keys(body) },
       "Builder profile updated",
     );
     return result;
@@ -310,7 +309,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.deleteBuilder(token);
     });
 
-    Log.info({ builder: this.id }, "Builder deleted");
+    Log.info({ builder: await this.getId() }, "Builder deleted");
     return result;
   }
 
@@ -331,7 +330,10 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.createCollection(token, body);
     });
 
-    Log.info({ builder: this.id, collection: body.name }, "Collection created");
+    Log.info(
+      { builder: await this.getId(), collection: body.name },
+      "Collection created",
+    );
     return result;
   }
 
@@ -356,7 +358,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         count: result.data?.length || 0,
       },
       "Collections read",
@@ -384,7 +386,10 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     const result = processPlaintextResponse(resultsByNode);
 
-    Log.info({ builder: this.id, collection }, "Collection metadata read");
+    Log.info(
+      { builder: await this.getId(), collection },
+      "Collection metadata read",
+    );
     return result;
   }
 
@@ -405,7 +410,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.deleteCollection(token, collection);
     });
 
-    Log.info({ builder: this.id, collection }, "Collection deleted");
+    Log.info({ builder: await this.getId(), collection }, "Collection deleted");
     return result;
   }
 
@@ -429,7 +434,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         collection,
         name: body.name,
       },
@@ -459,7 +464,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         collection,
         index,
       },
@@ -496,7 +501,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       {
         collection: body.collection,
         count: body.data.length,
-        builder: this.id,
+        builder: await this.getId(),
         isConcealed: !!key,
       },
       "Data created",
@@ -525,7 +530,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     const result = processPlaintextResponse(resultsByNode);
 
     Log.info(
-      { builder: this.id, count: result.data?.length || 0 },
+      { builder: await this.getId(), count: result.data?.length || 0 },
       "Queries read",
     );
     return result;
@@ -548,7 +553,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.getQuery(token, query);
     });
 
-    Log.info({ query, builder: this.id }, "Query read");
+    Log.info({ query, builder: await this.getId() }, "Query read");
     return result;
   }
 
@@ -571,7 +576,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         name: body.name,
         id: body._id,
         collection: body.collection,
@@ -599,7 +604,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.deleteQuery(token, query);
     });
 
-    Log.info({ builder: this.id, query }, "Query deleted");
+    Log.info({ builder: await this.getId(), query }, "Query deleted");
     return result;
   }
 
@@ -622,7 +627,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         query: body._id,
         run: Object.values(result)[0]?.data,
       },
@@ -684,7 +689,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         collection: body.collection,
         count: result.data?.length || 0,
       },
@@ -717,7 +722,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         collection: body.collection,
         filter: body.filter,
       },
@@ -746,7 +751,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         collection: body.collection,
         filter: body.filter,
       },
@@ -811,7 +816,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     return result;
   }
 
-  private getInvocationFor(options: {
+  private async getInvocationFor(options: {
     auth?: AuthContext;
     audience: NucDid;
     command: string;
@@ -822,7 +827,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return Promise.resolve(auth.invocation);
     }
 
-    const signer = auth?.signer ?? this.keypair.signer();
+    const signer = auth?.signer ?? this.signer;
     const expiresAt = intoSecondsFromNow(60);
 
     if (auth?.delegation) {

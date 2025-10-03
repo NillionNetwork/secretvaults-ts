@@ -11,7 +11,7 @@ export const ReadAboutNodeResponse = z.object({
     version: z.string(),
   }),
   public_key: z.string(),
-  url: z.string().url(),
+  url: z.url(),
   maintenance: z.object({
     active: z.boolean(),
     started_at: z.iso.datetime(),

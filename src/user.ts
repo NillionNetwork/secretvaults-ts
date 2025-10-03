@@ -2,8 +2,8 @@ import {
   Builder,
   Codec,
   type Command,
-  type Keypair,
   type Did as NucDid,
+  type Signer,
 } from "@nillion/nuc";
 import {
   type AuthContext,
@@ -81,31 +81,30 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    * @example
    * // Basic instantiation with an auto-generated key
    * const userClient = await SecretVaultUserClient.from({
-   *   keypair: Keypair.generate(),
+   *   signer: Signer.generate(),
    *   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
    * });
    *
    * @example
    * // Advanced: Using a custom signer from a browser wallet
    * import { ethers } from "ethers";
-   * import { Keypair } from "@nillion/nuc";
+   * import { Signer } from "@nillion/nuc";
    *
    * const provider = new ethers.BrowserProvider(window.ethereum);
    * const ethersSigner = await provider.getSigner();
-   * const domain = { name: "NUC", version: "1", chainId: 1 };
-   * const customKeypair = await Keypair.fromEthersSigner(ethersSigner, domain);
+   * const customSigner = await Signer.fromWeb3(ethersSigner);
    *
    * const clientWithSigner = await SecretVaultUserClient.from({
-   *   keypair: customKeypair,
+   *   signer: customSigner,
    *   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
    * });
    */
   static async from(options: {
-    keypair: Keypair;
+    signer: Signer;
     baseUrls: string[];
     blindfold?: BlindfoldFactoryConfig;
   }): Promise<SecretVaultUserClient> {
-    const { baseUrls, keypair, blindfold } = options;
+    const { baseUrls, signer, blindfold } = options;
 
     // Create clients
     const clientPromises = baseUrls.map((u) => createNilDbUserClient(u));
@@ -117,7 +116,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
         // User provided a key
         client = new SecretVaultUserClient({
           clients,
-          keypair,
+          signer,
           key: blindfold.key,
         });
       } else {
@@ -129,7 +128,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
         client = new SecretVaultUserClient({
           clients,
-          keypair,
+          signer,
           key,
         });
       }
@@ -137,13 +136,14 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       // No encryption
       client = new SecretVaultUserClient({
         clients,
-        keypair,
+        signer,
       });
     }
 
+    const did = await signer.getDid();
     Log.info(
       {
-        did: keypair.toDid().didString,
+        did: did.didString,
         nodes: clients.length,
         encryption: client._options.key?.constructor.name ?? "none",
       },
@@ -167,7 +167,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     });
 
     const result = processPlaintextResponse(resultsByNode);
-    Log.info({ user: this.id }, "User profile read");
+    Log.info({ user: await this.getId() }, "User profile read");
     return result;
   }
 
@@ -195,7 +195,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
           .audience(client.id)
           .command(NucCmd.nil.db.data.create as Command)
           .expiresAt(intoSecondsFromNow(60))
-          .signAndSerialize(this.keypair.signer());
+          .signAndSerialize(this.signer);
       }
 
       const id = client.id.didString;
@@ -205,7 +205,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     Log.info(
       {
-        user: this.id,
+        user: await this.getId(),
         collection: body.collection,
         documents: body.data.length,
         concealed: !!key,
@@ -235,7 +235,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     const result = processPlaintextResponse(resultsByNode);
 
     Log.info(
-      { user: this.id, count: result.data?.length || 0 },
+      { user: await this.getId(), count: result.data?.length || 0 },
       "User data references listed",
     );
 
@@ -276,7 +276,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     Log.info(
       {
-        user: this.id,
+        user: await this.getId(),
         collection: params.collection,
         document: params.document,
       },
@@ -304,7 +304,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     Log.info(
       {
-        user: this.id,
+        user: await this.getId(),
         collection: params.collection,
         document: params.document,
       },
@@ -332,7 +332,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     Log.info(
       {
-        user: this.id,
+        user: await this.getId(),
         collection: body.collection,
         document: body.document,
         grantee: body.acl.grantee,
@@ -361,7 +361,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     Log.info(
       {
-        user: this.id,
+        user: await this.getId(),
         collection: body.collection,
         document: body.document,
         revokee: body.grantee,
@@ -372,7 +372,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     return result;
   }
 
-  private getInvocationFor(options: {
+  private async getInvocationFor(options: {
     auth?: AuthContext;
     command: string;
     audience: NucDid;
@@ -383,7 +383,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       return Promise.resolve(auth.invocation);
     }
 
-    const signer = auth?.signer ?? this.keypair.signer();
+    const signer = auth?.signer ?? this.signer;
     const expiresAt = intoSecondsFromNow(60);
 
     if (auth?.delegation) {
@@ -398,7 +398,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     // Fallback to self-signed invocation
     return Builder.invocation()
       .command(command as Command)
-      .subject(this.did)
+      .subject(await this.getDid())
       .audience(audience)
       .expiresAt(expiresAt)
       .signAndSerialize(signer);

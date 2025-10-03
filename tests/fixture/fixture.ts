@@ -1,4 +1,4 @@
-import { Keypair, NilauthClient, PayerBuilder } from "@nillion/nuc";
+import { NilauthClient, PayerBuilder, Signer } from "@nillion/nuc";
 import { MongoClient } from "mongodb";
 import type { Logger } from "pino";
 import * as vitest from "vitest";
@@ -151,28 +151,31 @@ async function buildContext(
   // create the secret vault user client
   const user = await SecretVaultUserClient.from({
     baseUrls: nildbNodesUrls,
-    keypair: Keypair.generate(),
+    signer: Signer.generate(),
   });
 
-  const payer = await PayerBuilder.fromKeypair(Keypair.from(secretKey))
+  const payer = await PayerBuilder.fromPrivateKey(secretKey)
     .chainUrl(nilchainUrl)
     .build();
+
   const nilauth = await NilauthClient.create({
     baseUrl: nilauthUrl,
     payer,
   });
 
+  const builderSigner = Signer.generate();
   const builder = await SecretVaultBuilderClient.from({
-    keypair: Keypair.generate(),
+    signer: builderSigner,
     dbs: nildbNodesUrls,
     nilauthClient: nilauth,
   });
 
   if (options.activateBuilderSubscription) {
-    log.info({ did: builder.did.didString }, "Renewing subscription");
-    await nilauth.paySubscription(
-      Keypair.from(secretKey),
-      builder.did,
+    const builderDid = await builder.getDid();
+    log.info({ did: builderDid.didString }, "Renewing subscription");
+    await nilauth.payAndValidate(
+      Signer.fromPrivateKey(secretKey),
+      builderDid,
       "nildb",
     );
     await builder.refreshRootToken();

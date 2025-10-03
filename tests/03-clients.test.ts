@@ -67,7 +67,7 @@ describe("clients.test.ts", () => {
 
       const results = await builder.register({
         name: faker.company.name(),
-        did: builder.did.didString,
+        did: (await builder.getDid()).didString,
       });
 
       const nildbA = results[nildbAId]!;
@@ -81,7 +81,7 @@ describe("clients.test.ts", () => {
       const { builder, expect } = c;
 
       const { data: profile } = await builder.readProfile();
-      expect(profile._id).toBe(builder.did.didString);
+      expect(profile._id).toBe((await builder.getDid()).didString);
     });
   });
 });

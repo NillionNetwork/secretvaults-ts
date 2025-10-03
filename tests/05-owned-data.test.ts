@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { Builder, type Command, Keypair, NilauthClient } from "@nillion/nuc";
+import { Builder, type Command, NilauthClient, Signer } from "@nillion/nuc";
 import { describe } from "vitest";
 import { SecretVaultBuilderClient } from "#/builder";
 import { NucCmd } from "#/common/nuc-cmd";
@@ -25,33 +25,34 @@ describe("owned-data.test.ts", () => {
     const { builder, env, payer, log } = c;
 
     await builder.register({
-      did: builder.did.didString,
+      did: (await builder.getDid()).didString,
       name: faker.company.name(),
     });
 
-    const otherBuilderKeypair = Keypair.generate();
+    const otherBuilderSigner = Signer.generate();
     const otherNilauth = await NilauthClient.create({
       baseUrl: env.urls.auth,
     });
     otherBuilder = await SecretVaultBuilderClient.from({
-      keypair: otherBuilderKeypair,
+      signer: otherBuilderSigner,
       dbs: env.urls.dbs,
       nilauthClient: otherNilauth,
     });
 
+    const otherBuilderDid = await otherBuilder.getDid();
     log.info(
-      { did: otherBuilder.did.didString },
+      { did: otherBuilderDid.didString },
       "Paying for otherBuilder subscription",
     );
-    await payer.nilauth.paySubscription(
-      Keypair.from(process.env.APP_NILCHAIN_PRIVATE_KEY_0!),
-      otherBuilder.did,
+    await payer.nilauth.payAndValidate(
+      Signer.fromPrivateKey(process.env.APP_NILCHAIN_PRIVATE_KEY_0!),
+      otherBuilderDid,
       "nildb",
     );
     await otherBuilder.refreshRootToken();
 
     await otherBuilder.register({
-      did: otherBuilder.did.didString,
+      did: otherBuilderDid.didString,
       name: faker.company.name(),
     });
   });
@@ -97,17 +98,20 @@ describe("owned-data.test.ts", () => {
   test("user can upload data", async ({ c }) => {
     const { builder, user, expect } = c;
 
+    const userDid = await user.getDid();
+    const builderDid = await builder.getDid();
+
     const delegation = await Builder.delegationFrom(builder.rootToken)
       .command(NucCmd.nil.db.data.create as Command)
-      .audience(user.did)
+      .audience(userDid)
       .expiresAt(intoSecondsFromNow(60))
-      .signAndSerialize(builder.keypair.signer());
+      .signAndSerialize(builder.signer);
 
     const results = await user.createData(
       {
-        owner: user.did.didString,
+        owner: userDid.didString,
         acl: {
-          grantee: builder.did.didString,
+          grantee: builderDid.didString,
           read: true,
           write: false,
           execute: true,
@@ -144,12 +148,15 @@ describe("owned-data.test.ts", () => {
   }) => {
     const { user, builder, expect } = c;
 
+    const userDid = await user.getDid();
+    const builderDid = await builder.getDid();
+
     // Create more data to test pagination
     const delegation = await Builder.delegationFrom(builder.rootToken)
       .command(NucCmd.nil.db.data.create as Command)
-      .audience(user.did)
+      .audience(userDid)
       .expiresAt(intoSecondsFromNow(60))
-      .signAndSerialize(builder.keypair.signer());
+      .signAndSerialize(builder.signer);
 
     const moreData = Array.from({ length: 5 }, () => ({
       _id: faker.string.uuid(),
@@ -158,9 +165,9 @@ describe("owned-data.test.ts", () => {
 
     await user.createData(
       {
-        owner: user.did.didString,
+        owner: userDid.didString,
         acl: {
-          grantee: builder.did.didString,
+          grantee: builderDid.didString,
           read: true,
           write: false,
           execute: false,
@@ -192,12 +199,14 @@ describe("owned-data.test.ts", () => {
   test("user can grant access to their data", async ({ c }) => {
     const { user, expect } = c;
 
+    const otherBuilderDid = await otherBuilder.getDid();
+
     // grant access to otherBuilder
     await user.grantAccess({
       collection: collection._id,
       document: record._id,
       acl: {
-        grantee: otherBuilder.did.didString,
+        grantee: otherBuilderDid.didString,
         read: true,
         write: false,
         execute: false,
@@ -212,7 +221,7 @@ describe("owned-data.test.ts", () => {
 
     // Assert against the single, unified response's ACL
     const otherBuilderAcl = dataResult.data._acl.find(
-      (acl) => acl.grantee === otherBuilder.did.didString,
+      (acl) => acl.grantee === otherBuilderDid.didString,
     );
 
     expect(otherBuilderAcl).toBeDefined();
@@ -224,12 +233,14 @@ describe("owned-data.test.ts", () => {
   test("user can revoke access to their data", async ({ c }) => {
     const { user, expect } = c;
 
+    const otherBuilderDid = await otherBuilder.getDid();
+
     // First grant access to have something to revoke
     await user.grantAccess({
       collection: collection._id,
       document: record._id,
       acl: {
-        grantee: otherBuilder.did.didString,
+        grantee: otherBuilderDid.didString,
         read: true,
         write: true,
         execute: false,
@@ -238,7 +249,7 @@ describe("owned-data.test.ts", () => {
 
     // revoke access to otherBuilder
     await user.revokeAccess({
-      grantee: otherBuilder.did.didString,
+      grantee: otherBuilderDid.didString,
       collection: collection._id,
       document: record._id,
     });
@@ -250,7 +261,7 @@ describe("owned-data.test.ts", () => {
     });
 
     const otherBuilderAcl = result.data._acl.find(
-      (acl) => acl.grantee === otherBuilder.did.didString,
+      (acl) => acl.grantee === otherBuilderDid.didString,
     );
     expect(otherBuilderAcl).toBeUndefined();
   });
@@ -259,7 +270,7 @@ describe("owned-data.test.ts", () => {
     const { user, expect } = c;
     const result = await user.readProfile();
 
-    expect(result.data._id).toBe(user.did.didString);
+    expect(result.data._id).toBe((await user.getDid()).didString);
     // Profile contains logs from all operations in test suite
     // Including: create-data (1 + 5), auth (2)
     expect(result.data.logs.length).toBeGreaterThanOrEqual(5);

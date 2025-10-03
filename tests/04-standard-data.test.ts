@@ -27,7 +27,7 @@ describe("standard-data.test.ts", () => {
     const { builder } = c;
 
     await builder.register({
-      did: builder.did.didString,
+      did: (await builder.getDid()).didString,
       name: faker.company.name(),
     });
 

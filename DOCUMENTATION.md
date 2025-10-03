@@ -4,23 +4,23 @@ This document provides a guide to using the `@nillion/secretvaults` library, cov
 
 ## Client Instantiation
 
-The library exposes two main clients: `SecretVaultBuilderClient` and `SecretVaultUserClient`. Both are initialized using a static `from()` method, which requires a `@nillion/nuc` `Keypair` and a list of NilDB node URLs.
+The library exposes two main clients: `SecretVaultBuilderClient` and `SecretVaultUserClient`. Both are initialized using a static `from()` method, which requires a `@nillion/nuc` `Signer` and a list of NilDB node URLs.
 
 ### Builder Client
 
 The `SecretVaultBuilderClient` is used by data producers to manage collections, queries, and standard data. It requires a `nilauthClient` for obtaining root tokens.
 
 ```typescript
-import { Keypair, NilauthClient } from "@nillion/nuc";
+import { Signer, NilauthClient } from "@nillion/nuc";
 import { SecretVaultBuilderClient } from "@nillion/secretvaults";
 
-const builderKeypair = Keypair.generate();
+const builderSigner = Signer.generate();
 const nilauthClient = await NilauthClient.create({
   /* ... nilauth options ... */
 });
 
 const builderClient = await SecretVaultBuilderClient.from({
-  keypair: builderKeypair,
+  signer: builderSigner,
   dbs: ["http://localhost:40081", "http://localhost:40082"],
   nilauthClient,
 });
@@ -34,13 +34,13 @@ await builderClient.refreshRootToken();
 The `SecretVaultUserClient` is used by data owners to manage their "owned" data, including creating data and managing access control lists (ACLs).
 
 ```typescript
-import { Keypair } from "@nillion/nuc";
+import { Signer } from "@nillion/nuc";
 import { SecretVaultUserClient } from "@nillion/secretvaults";
 
-const userKeypair = Keypair.generate();
+const userSigner = Signer.generate();
 
 const userClient = await SecretVaultUserClient.from({
-  keypair: userKeypair,
+  signer: userSigner,
   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
 });
 ```
@@ -69,11 +69,11 @@ const profile = await builderClient.readProfile({
 
 ## Advanced: Using with Browser Wallets
 
-The clients' dependency on the `@nillion/nuc` `Keypair` abstraction allows for integration with external signers, such as those from browser wallets. To do this, create a `Keypair` instance using the `fromEthersSigner` method and pass it to the client during instantiation.
+The clients' dependency on the `@nillion/nuc` `Signer` abstraction allows for integration with external signers, such as those from browser wallets. To do this, create a `Signer` instance using the `fromWeb3` method and pass it to the client during instantiation.
 
 ```typescript
 import { ethers } from "ethers";
-import { Keypair } from "@nillion/nuc";
+import { Signer } from "@nillion/nuc";
 import { SecretVaultUserClient } from "@nillion/secretvaults";
 
 // 1. Connect to the browser wallet.
@@ -81,20 +81,12 @@ import { SecretVaultUserClient } from "@nillion/secretvaults";
 const provider = new ethers.BrowserProvider(window.ethereum);
 const ethersSigner = await provider.getSigner();
 
-// 2. Define the EIP-712 domain for NUC signing.
-// The domain should match what the receiving services expect.
-const domain = {
-  name: "NUC",
-  version: "1",
-  chainId: 1, // Or the appropriate chainId
-};
+// 2. Create a Nillion Signer from the external Ethers signer.
+const nillionSigner = await Signer.fromWeb3(ethersSigner);
 
-// 3. Create a Nillion Keypair from the external Ethers signer.
-const nillionKeypair = await Keypair.fromEthersSigner(ethersSigner, domain);
-
-// 4. Instantiate the client with the custom, web3-backed Keypair.
+// 3. Instantiate the client with the custom, web3-backed Signer.
 const client = await SecretVaultUserClient.from({
-  keypair: nillionKeypair,
+  signer: nillionSigner,
   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
 });
 ```

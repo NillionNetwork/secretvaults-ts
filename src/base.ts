@@ -1,5 +1,5 @@
 import type { ClusterKey, SecretKey } from "@nillion/blindfold";
-import type { Did, Keypair, Signer } from "@nillion/nuc";
+import type { Did, Signer } from "@nillion/nuc";
 import type { ByNodeName } from "#/dto/common";
 import type { ReadAboutNodeResponse } from "#/dto/system.dto";
 import { executeOnCluster } from "./common/cluster";
@@ -23,7 +23,7 @@ export type AuthContext =
  * Common constructor options for all SecretVault clients.
  */
 export type SecretVaultBaseOptions<TClient extends NilDbBaseClient> = {
-  keypair: Keypair;
+  signer: Signer;
   clients: TClient[];
   key?: SecretKey | ClusterKey;
 };
@@ -38,15 +38,15 @@ export class SecretVaultBaseClient<TClient extends NilDbBaseClient> {
     this._options = options;
   }
 
-  get id(): string {
-    return this.did.didString;
+  async getId(): Promise<string> {
+    return (await this.getDid()).didString;
   }
 
   /**
-   * The DID of the keypair associated with this client.
+   * The DID of the signer associated with this client.
    */
-  get did(): Did {
-    return this._options.keypair.toDid();
+  async getDid(): Promise<Did> {
+    return this._options.signer.getDid();
   }
 
   /**
@@ -57,10 +57,10 @@ export class SecretVaultBaseClient<TClient extends NilDbBaseClient> {
   }
 
   /**
-   * The keypair used by this client for signing.
+   * The signer used by this client for signing.
    */
-  get keypair(): Keypair {
-    return this._options.keypair;
+  get signer(): Signer {
+    return this._options.signer;
   }
 
   /**
