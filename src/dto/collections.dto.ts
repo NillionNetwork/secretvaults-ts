@@ -1,7 +1,6 @@
 import { z } from "zod";
 import {
   ApiSuccessResponse,
-  DidString,
   PaginatedResponse,
   PaginationQuerySchema,
 } from "./common";

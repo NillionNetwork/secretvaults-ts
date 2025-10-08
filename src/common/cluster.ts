@@ -225,7 +225,7 @@ export async function prepareRequest<
       }
     }
 
-    result[client.id.toString()] = bodyCopy;
+    result[client.id.didString] = bodyCopy;
   });
 
   // 6. Return the bodies mapped by node name
