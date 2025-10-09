@@ -192,12 +192,14 @@ if (typeof globalThis !== "undefined") {
         }
       },
     };
-  }
 
-  // Register this specific logger instance's API with the global controller.
-  globalThis.__NILLION._instances.add({
-    set: setLogLevel,
-    get: getLogLevel,
-    clear: clearStoredLogLevel,
-  });
+    if (globalThis.__NILLION?._instances) {
+      // Register this specific logger instance's API with the global controller.
+      globalThis.__NILLION._instances.add({
+        set: setLogLevel,
+        get: getLogLevel,
+        clear: clearStoredLogLevel,
+      });
+    }
+  }
 }
