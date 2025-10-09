@@ -1,6 +1,6 @@
-import { type ClusterKey, encrypt, type SecretKey } from "@nillion/blindfold";
-import { isPlainObject } from "es-toolkit";
-import { reveal } from "#/common/blindfold";
+import type { ClusterKey, SecretKey } from "@nillion/blindfold";
+import _ from "es-toolkit/compat";
+import { conceal, reveal } from "#/common/blindfold";
 import type { ByNodeName, DidString } from "#/dto/common";
 import { Log } from "#/logger";
 import type { NilDbBaseClient } from "#/nildb/base-client";
@@ -61,70 +61,6 @@ export async function executeOnCluster<Client extends NilDbBaseClient, T>(
   return Object.fromEntries(successes);
 }
 
-type AllotInfo = {
-  path: string;
-  value: string | number | bigint | Uint8Array<ArrayBufferLike>;
-};
-
-/**
- * Recursively walks a data structure (objects and arrays) to find all properties
- * with the key "%allot" (case-insensitive) and returns their dot-notation paths and values.
- *
- * @example
- * const obj = {
- *   "%allot": "secret1",
- *   data: [
- *     { "%allot": "secret2" },
- *     { nested: { "%ALLOT": "secret3" } }
- *   ]
- * };
- *
- * findAllotPathsAndValues(obj);
- * // Returns:
- * // [
- * //   { path: "%allot", value: "secret1" },
- * //   { path: "data.0.%allot", value: "secret2" },
- * //   { path: "data.1.nested.%ALLOT", value: "secret3" }
- * // ]
- */
-function findAllotPathsAndValues(
-  node: Record<string, unknown> | unknown[],
-  currentPath = "",
-): AllotInfo[] {
-  // Handle arrays
-  if (Array.isArray(node)) {
-    return node.flatMap((item, index) => {
-      const fullPath = currentPath ? `${currentPath}.${index}` : `${index}`;
-      if (isPlainObject(item)) {
-        return findAllotPathsAndValues(
-          item as Record<string, unknown>,
-          fullPath,
-        );
-      }
-      return [];
-    });
-  }
-
-  // Handle objects
-  return Object.entries(node).flatMap(([key, value]) => {
-    const fullPath = currentPath ? `${currentPath}.${key}` : key;
-
-    if (key.toLowerCase() === "%allot") {
-      return [{ path: fullPath, value }];
-    }
-    if (isPlainObject(value)) {
-      return findAllotPathsAndValues(
-        value as Record<string, unknown>,
-        fullPath,
-      );
-    }
-    if (Array.isArray(value)) {
-      return findAllotPathsAndValues(value, fullPath);
-    }
-    return [];
-  }) as AllotInfo[];
-}
-
 /**
  * Prepares a request body for distribution across multiple nodes by creating copies
  * of the body and secret-sharing any values marked with %allot keys.
@@ -136,14 +72,14 @@ function findAllotPathsAndValues(
  *   body: {
  *     data: [{
  *       foo: "bar",
- *       "%allot": "secret-value"
+ *       value: { "%allot": "secret-value" }
  *     }]
  *   }
  * });
  * // Returns: {
- * //   "node1": { data: [{ foo: "bar", "%share": "encrypted-share-1" }] },
- * //   "node2": { data: [{ foo: "bar", "%share": "encrypted-share-2" }] },
- * //   "node3": { data: [{ foo: "bar", "%share": "encrypted-share-3" }] },
+ * //   "node1": { data: [{ foo: "bar", value: {"%share": "encrypted-share-1"} }] },
+ * //   "node2": { data: [{ foo: "bar", value: {"%share": "encrypted-share-2"} }] },
+ * //   "node3": { data: [{ foo: "bar", value: {"%share": "encrypted-share-3"} }] },
  * // }
  */
 export async function prepareRequest<
@@ -155,80 +91,28 @@ export async function prepareRequest<
 }): Promise<ByNodeName<T>> {
   const { key, clients, body } = options;
 
-  // 1. Find all %allot values in the body
-  const allots = findAllotPathsAndValues(body);
+  // If a key is provided, conceal the data and map shares to nodes.
+  if (key) {
+    const shares = await conceal(key, body);
 
-  // 2. Warn if %allots found but no key configured
-  if (!key && allots.length > 0) {
-    throw new Error(`No key but ${allots.length} %allot(s) detected in data`);
-  }
-
-  // 3. Create secret shares for each %allot value if key exists
-  const sharesMap = new Map<string, Record<string, unknown>>();
-  if (key && allots.length > 0) {
-    for (const { path, value } of allots) {
-      // Encrypt the value to create shares
-      const encryptedShares = await encrypt(key, value);
-
-      // Map shares to node Dids
-      const sharesByNode: Record<string, unknown> = {};
-      clients.forEach((client, index) => {
-        sharesByNode[client.id.toString()] = encryptedShares[index];
-      });
-
-      sharesMap.set(path, sharesByNode);
+    if (shares.length !== clients.length) {
+      throw new Error(
+        `Number of secret shares (${shares.length}) does not match number of clients (${clients.length}).`,
+      );
     }
+
+    const result: ByNodeName<T> = {};
+    clients.forEach((client, index) => {
+      result[client.id.didString] = shares[index] as T;
+    });
+    return result;
   }
 
-  // 4 & 5. Create copies and replace %allot: <value> with %share: <nodeX_encrypted_share>
-  const result: ByNodeName<T> = {} as ByNodeName<T>;
-
+  // If no key, just create a deep copy for each client.
+  const result: ByNodeName<T> = {};
   clients.forEach((client) => {
-    const bodyCopy = structuredClone(body) as T;
-
-    // Replace each %allot with %share for this node
-    if (key && allots.length > 0) {
-      for (const { path } of allots) {
-        const sharesByNode = sharesMap.get(path);
-        if (sharesByNode) {
-          // Parse the path to handle array indices
-          const pathParts = path.split(".");
-          const allotKey = pathParts.pop(); // This should be "%allot" or "%ALLOT"
-          if (!allotKey) {
-            throw new Error(
-              `Expected an allot key in the path parts: ${pathParts}`,
-            );
-          }
-
-          if (pathParts.length === 0) {
-            delete bodyCopy[allotKey];
-            // @ts-expect-error correcting types requires out of scope wider refactor
-            bodyCopy["%share"] = sharesByNode[client.id.toString()];
-          } else {
-            // biome-ignore lint/suspicious/noExplicitAny: Navigate to parent to handle array indices
-            let parent: any = bodyCopy;
-            for (const part of pathParts) {
-              // Check if part is a number (array index)
-              const index = Number(part);
-              if (Number.isNaN(index)) {
-                parent = parent[part];
-              } else {
-                parent = parent[index];
-              }
-            }
-
-            // Replace %allot with %share
-            delete parent[allotKey];
-            parent["%share"] = sharesByNode[client.id.toString()];
-          }
-        }
-      }
-    }
-
-    result[client.id.didString] = bodyCopy;
+    result[client.id.didString] = _.cloneDeep(body);
   });
-
-  // 6. Return the bodies mapped by node name
   return result;
 }
 
