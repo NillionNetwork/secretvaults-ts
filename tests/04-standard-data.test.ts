@@ -116,7 +116,7 @@ describe("standard-data.test.ts", () => {
   test("tail data", async ({ c }) => {
     const { builder, expect } = c;
 
-    const results = await builder.tailData(collection._id, 5);
+    const results = await builder.tailData(collection._id, { limit: 5 });
     expect(results.data).toHaveLength(1);
     expect(results.data.at(0)?.name).toBe("a");
   });
@@ -135,7 +135,9 @@ describe("standard-data.test.ts", () => {
       });
     }
 
-    const paginatedResult = await builder.getQueries({ limit: 2, offset: 3 });
+    const paginatedResult = await builder.getQueries({
+      pagination: { limit: 2, offset: 3 },
+    });
     expect(paginatedResult.data).toHaveLength(2);
     expect(paginatedResult.pagination.total).toBe(5);
     expect(paginatedResult.pagination.limit).toBe(2);

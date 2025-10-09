@@ -253,10 +253,12 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Reads the builder's profile from the cluster.
    */
-  async readProfile(auth?: AuthContext): Promise<ReadBuilderProfileResponse> {
+  async readProfile(options?: {
+    auth?: AuthContext;
+  }): Promise<ReadBuilderProfileResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.builders.read,
       });
@@ -274,11 +276,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async updateBuilderProfile(
     body: UpdateBuilderProfileRequest,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<UpdateBuilderProfileResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.builders.update,
       });
@@ -296,12 +298,12 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Deletes the builder and associated resources from all nodes.
    */
-  async deleteBuilder(
-    auth?: AuthContext,
-  ): Promise<ByNodeName<DeleteBuilderResponse>> {
+  async deleteBuilder(options?: {
+    auth?: AuthContext;
+  }): Promise<ByNodeName<DeleteBuilderResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.builders.delete,
       });
@@ -318,11 +320,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async createCollection(
     body: CreateCollectionRequest,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<CreateCollectionResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.create,
       });
@@ -340,18 +342,18 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Reads a list of all collections from the cluster.
    */
-  async readCollections(
-    pagination?: PaginationQuery,
-    auth?: AuthContext,
-  ): Promise<ListCollectionsResponse> {
+  async readCollections(options?: {
+    pagination?: PaginationQuery;
+    auth?: AuthContext;
+  }): Promise<ListCollectionsResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.read,
       });
 
-      return client.readCollections(token, pagination);
+      return client.readCollections(token, options?.pagination);
     });
 
     const result = processPlaintextResponse(resultsByNode);
@@ -372,11 +374,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async readCollection(
     collection: Uuid,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ReadCollectionMetadataResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.read,
       });
@@ -398,11 +400,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async deleteCollection(
     collection: Uuid,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<DeleteCollectionResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.delete,
       });
@@ -420,11 +422,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   async createCollectionIndex(
     collection: Uuid,
     body: CreateCollectionIndexRequest,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<CreateCollectionIndexResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.update,
       });
@@ -450,11 +452,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   async dropCollectionIndex(
     collection: Uuid,
     index: Name,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<DropCollectionIndexResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.update,
       });
@@ -479,7 +481,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async createStandardData(
     body: CreateStandardDataRequest,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<CreateDataResponse>> {
     const { key, clients } = this._options;
 
@@ -487,7 +489,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.create,
       });
@@ -513,18 +515,18 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Retrieves a list of all saved queries.
    */
-  async getQueries(
-    pagination?: PaginationQuery,
-    auth?: AuthContext,
-  ): Promise<ReadQueriesResponse> {
+  async getQueries(options?: {
+    pagination?: PaginationQuery;
+    auth?: AuthContext;
+  }): Promise<ReadQueriesResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.read,
       });
 
-      return client.getQueries(token, pagination);
+      return client.getQueries(token, options?.pagination);
     });
 
     const result = processPlaintextResponse(resultsByNode);
@@ -541,11 +543,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async getQuery(
     query: Uuid,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<ReadQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.read,
       });
@@ -562,11 +564,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async createQuery(
     body: CreateQueryRequest,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<CreateQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.create,
       });
@@ -592,11 +594,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async deleteQuery(
     query: Uuid,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<DeleteQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.delete,
       });
@@ -613,11 +615,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async runQuery(
     body: RunQueryRequest,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<RunQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.execute,
       });
@@ -641,11 +643,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   readQueryRunResults(
     runs: ByNodeName<Uuid>,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<ReadQueryRunByIdResponse>> {
     return executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.read,
       });
@@ -661,11 +663,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async findData(
     body: FindDataRequest,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<FindDataResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.read,
       });
@@ -704,14 +706,14 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async updateData(
     body: UpdateDataRequest,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<UpdateDataResponse>> {
     const { key, clients } = this._options;
 
     const nodePayloads = await prepareRequest({ key, clients, body });
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.update,
       });
@@ -737,11 +739,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async deleteData(
     body: DeleteDataRequest,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<DeleteDataResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.delete,
       });
@@ -766,11 +768,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async flushData(
     collection: Uuid,
-    auth?: AuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<FlushDataResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.delete,
       });
@@ -787,14 +789,14 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async tailData(
     collection: Uuid,
-    limit = 10,
-    auth?: AuthContext,
+    options?: { limit?: number; auth?: AuthContext },
   ): Promise<TailDataResponse> {
+    const limit = options?.limit ?? 10;
     Log.debug({ collection, limit }, "Tailing data");
 
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
-        auth,
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.read,
       });

@@ -178,7 +178,9 @@ describe("owned-data.test.ts", () => {
       { delegation },
     );
 
-    const result = await user.listDataReferences({ limit: 2, offset: 1 });
+    const result = await user.listDataReferences({
+      pagination: { limit: 2, offset: 1 },
+    });
     expect(result.data).toHaveLength(2);
     expect(result.pagination.total).toBe(6);
     expect(result.pagination.limit).toBe(2);
