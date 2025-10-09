@@ -202,28 +202,22 @@ describe("standard-data.test.ts", () => {
   test("get queries list and individual query", async ({ c }) => {
     const { builder, expect } = c;
 
-    // Test getQueries() - should return list of queries
-    const queriesList = await builder.getQueries();
+    const queriesListResponse = await builder.getQueries();
 
-    // Should have results from both nodes
-    expect(Object.keys(queriesList)).toHaveLength(2);
-    expect(queriesList[nildbAId]).toBeDefined();
-    expect(queriesList[nildbBId]).toBeDefined();
-
-    // Check that we have at least one query (the one created in previous test)
-    const nodeAQueries = queriesList[nildbAId].data;
-    expect(nodeAQueries).toBeDefined();
-    expect(Array.isArray(nodeAQueries)).toBe(true);
-    expect(nodeAQueries.length).toBeGreaterThan(0);
+    // Check that we have at least one query (the one created in the 'can list queries' test)
+    const allQueries = queriesListResponse.data;
+    expect(allQueries).toBeDefined();
+    expect(Array.isArray(allQueries)).toBe(true);
+    expect(allQueries.length).toBeGreaterThan(0);
 
     // Verify the query summary has expected fields
-    const queryFromList = nodeAQueries.find((q) => q._id === query._id);
+    const queryFromList = allQueries.find((q) => q._id === query._id);
     expect(queryFromList).toBeDefined();
     expect(queryFromList?._id).toBe(query._id);
     expect(queryFromList?.name).toBe(query.name);
     expect(queryFromList?.collection).toBe(collection._id);
 
-    // Test getQuery() - should return single query
+    // Test getQuery() - should return single query from each node
     const singleQuery = await builder.getQuery(query._id);
 
     // Should have results from both nodes
