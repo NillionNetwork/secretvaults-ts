@@ -119,7 +119,7 @@ describe("owned-data.test.ts", () => {
         collection: collection._id,
         data: [record],
       },
-      { delegation },
+      { auth: { delegation } },
     );
     const pairs = Object.entries(results);
     expect(Object.keys(pairs)).toHaveLength(2);
@@ -175,7 +175,7 @@ describe("owned-data.test.ts", () => {
         collection: collection._id,
         data: moreData,
       },
-      { delegation },
+      { auth: { delegation } },
     );
 
     const result = await user.listDataReferences({

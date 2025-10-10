@@ -84,6 +84,7 @@ import {
 export type SecretVaultBuilderOptions =
   SecretVaultBaseOptions<NilDbBuilderClient> & {
     nilauthClient: NilauthClient;
+    rootToken?: Envelope | string;
   };
 
 /**
@@ -137,8 +138,15 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     nilauthClient: NilauthClient;
     dbs: string[];
     blindfold?: BlindfoldFactoryConfig;
+    rootToken?: Envelope | string;
   }): Promise<SecretVaultBuilderClient> {
-    const { dbs: baseUrls, signer, blindfold, nilauthClient } = options;
+    const {
+      dbs: baseUrls,
+      signer,
+      blindfold,
+      nilauthClient,
+      rootToken,
+    } = options;
 
     const did = await signer.getDid();
 
@@ -166,6 +174,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
           signer,
           key: blindfold.key,
           nilauthClient,
+          rootToken,
         });
       } else {
         // Create a new key
@@ -179,6 +188,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
           signer,
           key,
           nilauthClient,
+          rootToken,
         });
       }
     } else {
@@ -187,6 +197,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
         clients,
         signer,
         nilauthClient,
+        rootToken,
       });
     }
 
@@ -209,6 +220,17 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   constructor(options: SecretVaultBuilderOptions) {
     super(options);
     this.#nilauthClient = options.nilauthClient;
+
+    // Handle rootToken re-hydration
+    if (options.rootToken) {
+      if (typeof options.rootToken === "string") {
+        this.#rootToken = Codec.decodeBase64Url(options.rootToken);
+        Log.debug("Root token re-hydrated from string");
+      } else {
+        this.#rootToken = options.rootToken;
+        Log.debug("Root token re-hydrated from Envelope object");
+      }
+    }
   }
 
   get rootToken(): Envelope {
@@ -825,8 +847,14 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   }): Promise<string> {
     const { auth, audience, command } = options;
 
-    if (auth?.invocation) {
-      return Promise.resolve(auth.invocation);
+    if (auth?.invocations) {
+      const invocation = auth.invocations[audience.didString];
+      if (invocation) {
+        return Promise.resolve(invocation);
+      }
+      throw new Error(
+        `Invocation for node ${audience.didString} not found in provided 'invocations' map.`,
+      );
     }
 
     const signer = auth?.signer ?? this.signer;

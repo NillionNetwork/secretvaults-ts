@@ -48,13 +48,6 @@ import {
 export type SecretVaultUserOptions = SecretVaultBaseOptions<NilDbUserClient>;
 
 /**
- * A specific AuthContext for createData, which requires a delegation or invocation.
- */
-export type CreateDataAuthContext =
-  | { delegation: string; invocation?: never }
-  | { invocation: string; delegation?: never };
-
-/**
  * Client for user operations on SecretVaults.
  *
  * This client handles user-specific operations for managing owned documents,
@@ -178,8 +171,15 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    */
   async createData(
     body: CreateOwnedDataRequest,
-    auth: CreateDataAuthContext,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<CreateDataResponse>> {
+    if (!options?.auth) {
+      throw new Error(
+        "The 'createData' operation requires an 'AuthContext' containing a delegation token from the collection's builder.",
+      );
+    }
+    const { auth } = options;
+
     const { key, clients } = this._options;
 
     // 1. Prepare map of node-id to node-specific payload.
@@ -187,18 +187,11 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     // 2. Execute on all nodes, looking up the payload by node id.
     const result = await executeOnCluster(this.nodes, async (client) => {
-      let token: string;
-      if ("invocation" in auth && typeof auth.invocation === "string") {
-        token = auth.invocation;
-      } else {
-        // TypeScript knows this is the `delegation` case
-        const envelope = Codec.decodeBase64Url(auth.delegation);
-        token = await Builder.invocationFrom(envelope)
-          .audience(client.id)
-          .command(NucCmd.nil.db.data.create as Command)
-          .expiresAt(intoSecondsFromNow(60))
-          .signAndSerialize(this.signer);
-      }
+      const token = await this.getInvocationFor({
+        auth,
+        command: NucCmd.nil.db.data.create,
+        audience: client.id,
+      });
 
       const id = client.id.didString;
       const payload = nodePayloads[id];
@@ -381,8 +374,14 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   }): Promise<string> {
     const { auth, command, audience } = options;
 
-    if (auth?.invocation) {
-      return Promise.resolve(auth.invocation);
+    if (auth?.invocations) {
+      const invocation = auth.invocations[audience.didString];
+      if (invocation) {
+        return Promise.resolve(invocation);
+      }
+      throw new Error(
+        `Invocation for node ${audience.didString} not found in provided 'invocations' map.`,
+      );
     }
 
     const signer = auth?.signer ?? this.signer;

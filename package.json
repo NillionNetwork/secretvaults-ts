@@ -1,6 +1,6 @@
 {
   "name": "@nillion/secretvaults",
-  "version": "1.0.0-rc.0",
+  "version": "1.0.0-rc.1",
   "license": "MIT",
   "description": "A client for interacting with nillion's nildb blind module",
   "type": "module",
@@ -25,7 +25,7 @@
     "es-toolkit": "^1.39.8",
     "zod": "^4.1.11",
     "@nillion/blindfold": "0.1.0",
-    "@nillion/nuc": "1.0.0-rc.2",
+    "@nillion/nuc": "1.0.0-rc.3",
     "pino": "^9.13.1",
     "pino-pretty": "^13.1.1",
     "uuid": "^13.0.0"
