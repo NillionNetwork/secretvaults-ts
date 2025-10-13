@@ -232,6 +232,21 @@ export async function reveal(
 ): Promise<Record<string, unknown>> {
   const unified = await unify(key, shares);
 
+  // `unify` drops the _created and _updated fields so we pick the values from the first share as a canonical source
+  // this isn't ideal because we can't really 'merge' these timestamps. Nevertheless, we should expose these
+  // to the users and accept there will be some drift.
+  const firstShare = shares[0];
+  if (firstShare) {
+    if ("_created" in firstShare && firstShare._created) {
+      // @ts-expect-error: unified is a generic object, we are adding properties to it
+      unified._created = firstShare._created;
+    }
+    if ("_updated" in firstShare && firstShare._updated) {
+      // @ts-expect-error: unified is a generic object, we are adding properties to it
+      unified._updated = firstShare._updated;
+    }
+  }
+
   Log.debug(
     {
       type: key.constructor.name,
