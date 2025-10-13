@@ -864,14 +864,14 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       const envelope = Codec.decodeBase64Url(auth.delegation);
       return Builder.invocationFrom(envelope)
         .audience(audience)
-        .command(command as Command)
+        .command(command)
         .expiresAt(expiresAt)
         .signAndSerialize(signer);
     }
 
     // Fallback to root token
     return Builder.invocationFrom(this.rootToken)
-      .command(command as Command)
+      .command(command)
       .expiresAt(expiresAt)
       .audience(audience)
       .signAndSerialize(signer);
