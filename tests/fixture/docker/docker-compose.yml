@@ -49,6 +49,7 @@ services:
       - APP_NODE_PUBLIC_ENDPOINT=http://127.0.0.1:40081
       - APP_NODE_SECRET_KEY=6cab2d10ac21886404eca7cbd40f1777071a243177eae464042885b391412b4e
       - APP_PORT=8080
+      - APP_RATE_LIMIT_ENABLED=false
 
   nildb-2:
     image: public.ecr.aws/k5d9x2g2/nildb-api:main
@@ -67,6 +68,7 @@ services:
       - APP_NODE_PUBLIC_ENDPOINT=http://127.0.0.1:40082
       - APP_NODE_SECRET_KEY=91771a344f5caa0b89bcb89e2d59f63e99ab0ff05f8519d839d600747638cf6c
       - APP_PORT=8080
+      - APP_RATE_LIMIT_ENABLED=false
 
   mongo:
     image: mongo:8
