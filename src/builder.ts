@@ -1,7 +1,6 @@
 import {
   Builder,
   Codec,
-  type Command,
   type Envelope,
   type NilauthClient,
   type NilauthTypes,
@@ -120,12 +119,10 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    *
    * @example
    * // Advanced: Using a custom signer from a browser wallet
-   * import { ethers } from "ethers";
    * import { Signer } from "@nillion/nuc";
    *
-   * const provider = new ethers.BrowserProvider(window.ethereum);
-   * const ethersSigner = await provider.getSigner();
-   * const customSigner = await Signer.fromWeb3(ethersSigner);
+   * // Assumes window.ethereum is available from a browser wallet like MetaMask
+   * const customSigner = await Signer.fromEip1193Provider(window.ethereum);
    *
    * const clientWithSigner = await SecretVaultBuilderClient.from({
    *   signer: customSigner,

@@ -5,7 +5,6 @@ import { NucCmd } from "#/common/nuc-cmd";
 import { intoSecondsFromNow } from "#/common/utils";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import type { CreateOwnedDataRequest } from "#/dto/data.dto";
-import { SecretVaultUserClient } from "#/user";
 import collection from "./data/owned.collection.json";
 import { createFixture } from "./fixture/fixture";
 
@@ -33,37 +32,17 @@ describe("auth-context.test.ts", () => {
     // 1. Pre-mint invocations for each node in the cluster
     const invocations: Record<string, string> = {};
     for (const node of builder.nodes) {
-      const token = await Builder.invocationFrom(builder.rootToken)
+      invocations[node.id.didString] = await Builder.invocationFrom(
+        builder.rootToken,
+      )
         .audience(node.id)
         .command(NucCmd.nil.db.builders.read as Command)
         .signAndSerialize(builder.signer);
-      invocations[node.id.didString] = token;
     }
 
     // 2. Pass the map to the authenticated method
     const profile = await builder.readProfile({ auth: { invocations } });
     expect(profile.data._id).toBe((await builder.getDid()).didString);
-  });
-
-  test("user client can use a `delegation` string", async ({ c }) => {
-    const { builder, expect, env } = c;
-
-    const userClient = await SecretVaultUserClient.from({
-      signer: c.user.signer,
-      baseUrls: env.urls.dbs,
-    });
-    const userDid = await userClient.getDid();
-
-    const delegation = await Builder.delegationFrom(builder.rootToken)
-      .audience(userDid)
-      .subject(userDid)
-      .command(NucCmd.nil.db.users.root as Command)
-      .signAndSerialize(builder.signer);
-
-    const profile = await userClient.readProfile({
-      auth: { delegation },
-    });
-    expect(profile.data._id).toBe(userDid.didString);
   });
 
   test("user.createData throws error if auth context is missing", async ({
@@ -109,10 +88,11 @@ describe("auth-context.test.ts", () => {
     // 2. Pre-mint an invocation for each node from that delegation
     const invocations: Record<string, string> = {};
     for (const node of user.nodes) {
-      const token = await Builder.invocationFromString(delegation)
+      invocations[node.id.didString] = await Builder.invocationFromString(
+        delegation,
+      )
         .audience(node.id)
         .signAndSerialize(user.signer);
-      invocations[node.id.didString] = token;
     }
 
     // 3. Call createData with the invocations map

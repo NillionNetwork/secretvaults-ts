@@ -1,6 +1,5 @@
 import {
   Builder,
-  Codec,
   type Command,
   type Did as NucDid,
   type Signer,
@@ -80,12 +79,10 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    *
    * @example
    * // Advanced: Using a custom signer from a browser wallet
-   * import { ethers } from "ethers";
    * import { Signer } from "@nillion/nuc";
    *
-   * const provider = new ethers.BrowserProvider(window.ethereum);
-   * const ethersSigner = await provider.getSigner();
-   * const customSigner = await Signer.fromWeb3(ethersSigner);
+   * // Assumes window.ethereum is available from a browser wallet like MetaMask
+   * const customSigner = await Signer.fromEip1193Provider(window.ethereum);
    *
    * const clientWithSigner = await SecretVaultUserClient.from({
    *   signer: customSigner,
@@ -388,8 +385,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     const expiresAt = intoSecondsFromNow(60);
 
     if (auth?.delegation) {
-      const envelope = Codec.decodeBase64Url(auth.delegation);
-      return Builder.invocationFrom(envelope)
+      return Builder.invocationFromString(auth.delegation)
         .audience(audience)
         .command(command as Command)
         .expiresAt(expiresAt)
