@@ -80,22 +80,17 @@ const profile = await builderClient.readProfile({
 
 ## Advanced: Using with Browser Wallets
 
-The clients' dependency on the `@nillion/nuc` `Signer` abstraction allows for integration with external signers, such as those from browser wallets. To do this, create a `Signer` instance using the `fromWeb3` method and pass it to the client during instantiation.
+The clients' dependency on the `@nillion/nuc` `Signer` abstraction allows for integration with external signers, such as those from browser wallets. To do this, create a `Signer` instance using the `fromEip1193Provider` method and pass it to the client during instantiation.
 
 ```typescript
-import { ethers } from "ethers";
 import { Signer } from "@nillion/nuc";
 import { SecretVaultUserClient } from "@nillion/secretvaults";
 
-// 1. Connect to the browser wallet.
-// This example assumes a browser environment with a wallet like MetaMask injected.
-const provider = new ethers.BrowserProvider(window.ethereum);
-const ethersSigner = await provider.getSigner();
+// 1. Create a Nillion Signer directly from the browser's EIP-1193 provider.
+// This example assumes a browser environment with a wallet like MetaMask injected at window.ethereum.
+const nillionSigner = await Signer.fromEip1193Provider(window.ethereum);
 
-// 2. Create a Nillion Signer from the external Ethers signer.
-const nillionSigner = await Signer.fromWeb3(ethersSigner);
-
-// 3. Instantiate the client with the custom, web3-backed Signer.
+// 2. Instantiate the client with the custom, web3-backed Signer.
 const client = await SecretVaultUserClient.from({
   signer: nillionSigner,
   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
