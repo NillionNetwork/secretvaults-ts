@@ -92,18 +92,6 @@ export type SecretVaultBuilderOptions =
  * This client handles all builder-specific operations including registration,
  * collection management, data operations, and query execution. It supports
  * automatic handling of concealed data when configured with blindfold.
- *
- * @example
- * ```ts
- * const client = await SecretVaultBuilderClient.from({
- *   keypair: myKeypair,
- *   urls: {
- *     chain: "http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz",
- *     auth: "https://nilauth.sandbox.app-cluster.sandbox.nilogy.xyz",
- *     dbs: ["https://nildb-stg-n1.nillion.network", "https://nildb-stg-n2.nillion.network", "https://nildb-stg-n3.nillion.network"]
- *   }
- * });
- * ```
  */
 export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilderClient> {
   /**
