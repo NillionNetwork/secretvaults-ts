@@ -10,6 +10,8 @@ declare global {
       APP_NILAUTH_PUBLIC_KEY: string;
       APP_NILCHAIN_JSON_RPC: string;
       APP_NILCHAIN_PRIVATE_KEY_0: string;
+      APP_BUILDER_PRIVATE_KEY: string;
+      APP_OTHER_BUILDER_PRIVATE_KEY: string;
     }
   }
 }

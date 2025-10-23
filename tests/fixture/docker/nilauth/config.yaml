@@ -18,7 +18,7 @@ payments:
       nilai: 1
 
   token_price:
-    base_url: http://token-price-api/api/v3/simple/price
+    base_url: http://proxy
     api_key: abc
 
 postgres:

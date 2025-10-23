@@ -155,7 +155,7 @@ async function buildContext(
   });
 
   const builder = await SecretVaultBuilderClient.from({
-    keypair: Keypair.generate(),
+    keypair: Keypair.from(process.env.APP_BUILDER_PRIVATE_KEY),
     urls: {
       chain: nilchainUrl,
       auth: nilauthUrl,
@@ -173,9 +173,9 @@ async function buildContext(
   const nilauth = await NilauthClient.from(nilauthUrl, payer);
 
   if (options.activateBuilderSubscription) {
-    const publicKey = builder.keypair.publicKey("hex");
-    log.info({ publicKey }, "Renewing subscription");
-    await nilauth.payAndValidate(publicKey, "nildb");
+    console.error(
+      "Pay and validate is not supported. Use nilpay to activate your subscription and upgrade secretvaults to 1.0.0.",
+    );
     await builder.refreshRootToken();
   }
 
