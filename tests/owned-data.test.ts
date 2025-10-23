@@ -23,7 +23,7 @@ describe("owned-data.test.ts", () => {
   let otherBuilder: SecretVaultBuilderClient;
 
   beforeAll(async (c) => {
-    const { builder, env, payer } = c;
+    const { builder, env } = c;
 
     await builder.register({
       did: builder.did.toString() as Did,
@@ -31,14 +31,13 @@ describe("owned-data.test.ts", () => {
     });
 
     otherBuilder = await SecretVaultBuilderClient.from({
-      keypair: Keypair.generate(),
+      keypair: Keypair.from(process.env.APP_OTHER_BUILDER_PRIVATE_KEY),
       urls: env.urls,
     });
-
-    await payer.nilauth.payAndValidate(
-      otherBuilder.keypair.publicKey("hex"),
-      "nildb",
+    console.error(
+      "Pay and validate is not supported. Use nilpay to activate your subscription and upgrade secretvaults to 1.0.0.",
     );
+    // await payer.nilauth.payAndValidate(otherBuilder.keypair.publicKey("hex"), "nildb");
     await otherBuilder.refreshRootToken();
 
     await otherBuilder.register({

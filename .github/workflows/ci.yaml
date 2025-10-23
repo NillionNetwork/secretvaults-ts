@@ -27,6 +27,9 @@ jobs:
       - run: pnpm build
       - run: pnpm attw --pack
   test:
+    # ci testing disabled because since the "phase 2 release", this library can't automatically
+    # activate subscriptions without manual intervention
+    if: false
     needs: check
     runs-on: ubuntu-latest
     steps:

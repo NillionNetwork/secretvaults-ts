@@ -1,0 +1,24 @@
+:80 {
+	# Token price api (for nilauth)
+	handle /api/v3/simple/price {
+		header Content-Type "application/json"
+		respond `{"nillion":{"usd":1}}` 200
+	}
+
+	# Proxy to nilchain with CORS enabled
+	handle /api/proxy/devnet* {
+		# Add CORS headers to all responses
+		header Access-Control-Allow-Origin "*"
+		header Access-Control-Allow-Headers "*"
+		header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+
+		# Handle CORS preflight
+		@cors_preflight method OPTIONS
+		header @cors_preflight Access-Control-Max-Age "3600"
+		respond @cors_preflight 204
+
+		# Proxy to nilchain
+		uri strip_prefix /api/proxy/devnet
+		reverse_proxy nilchain:26648
+	}
+}
