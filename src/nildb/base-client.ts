@@ -1,4 +1,4 @@
-import { Did as NucDid } from "@nillion/nuc";
+import { Did } from "@nillion/nuc";
 import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
 import { isError, pause } from "#/common/utils";
@@ -24,17 +24,19 @@ export type AuthenticatedRequestOptions = {
 
 export class NilDbBaseClient {
   #options: NilDbBaseClientOptions;
+  #id: Did;
 
   constructor(options: NilDbBaseClientOptions) {
     this.#options = options;
+    this.#id = Did.fromPublicKey(this.#options.about.public_key);
   }
 
   get name(): string {
     return this.#options.about.public_key.slice(-4);
   }
 
-  get id(): NucDid {
-    return NucDid.fromHex(this.#options.about.public_key);
+  get id(): Did {
+    return this.#id;
   }
 
   /**
@@ -120,16 +122,20 @@ export class NilDbBaseClient {
 
         if (!this.isRetryableError(error) || attempt === maxRetries) {
           Log.debug(
-            `${context} failed permanently after ${attempt} attempts: %O`,
-            error,
+            {
+              error,
+            },
+            `${context} failed permanently after ${attempt} attempts`,
           );
           throw error;
         }
 
         const delay = Math.min(1000 * 2 ** (attempt - 1), 10000); // Exponential backoff with max 10s
         Log.debug(
-          `${context} failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms: %O`,
-          error,
+          {
+            error,
+          },
+          `${context} failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms`,
         );
         await pause(delay);
       }

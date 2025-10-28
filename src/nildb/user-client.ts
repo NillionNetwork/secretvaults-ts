@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
+import type { PaginationQuery } from "#/dto/common";
 import {
   CreateDataResponse,
   type CreateOwnedDataRequest,
@@ -26,14 +27,6 @@ export const NilDbUserClientOptions = z.object({
 export type NilDbUserClientOptions = z.infer<typeof NilDbUserClientOptions>;
 
 export class NilDbUserClient extends NilDbBaseClient {
-  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: currently unused but useful to keep
-  #options: NilDbUserClientOptions;
-
-  constructor(options: NilDbUserClientOptions) {
-    super(options);
-    this.#options = options;
-  }
-
   /**
    * Retrieves the authenticated user's profile information.
    */
@@ -48,9 +41,23 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Lists all data records owned by the authenticated user.
    */
-  listDataReferences(token: string): Promise<ListDataReferencesResponse> {
+  listDataReferences(
+    token: string,
+    pagination?: PaginationQuery,
+  ): Promise<ListDataReferencesResponse> {
+    let path: string = NilDbEndpoint.v1.users.data.root;
+    if (pagination) {
+      const params = new URLSearchParams();
+      if (pagination.limit !== undefined) {
+        params.set("limit", String(pagination.limit));
+      }
+      if (pagination.offset !== undefined) {
+        params.set("offset", String(pagination.offset));
+      }
+      path = `${path}?${params.toString()}`;
+    }
     return this.request({
-      path: NilDbEndpoint.v1.users.data.root,
+      path,
       token,
       responseSchema: ListDataReferencesResponse,
     });

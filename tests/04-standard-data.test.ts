@@ -1,9 +1,9 @@
 import * as crypto from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
-import type { ByNodeName, Did, Uuid } from "#/common/types";
 import { pause } from "#/common/utils";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
+import type { ByNodeName, DidString } from "#/dto/common";
 import collection from "./data/standard.collection.json";
 import query from "./data/standard.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -15,24 +15,24 @@ describe("standard-data.test.ts", () => {
     keepDbs: false,
   });
 
-  collection._id = crypto.randomUUID().toString() as Uuid;
-  query._id = crypto.randomUUID().toString() as Uuid;
+  collection._id = crypto.randomUUID().toString();
+  query._id = crypto.randomUUID().toString();
 
   let data: Array<{ _id: string; name: string }>;
 
-  let nildbAId: Did;
-  let nildbBId: Did;
+  let nildbAId: DidString;
+  let nildbBId: DidString;
 
   beforeAll(async (c) => {
     const { builder } = c;
 
     await builder.register({
-      did: builder.did.toString() as Did,
+      did: (await builder.getDid()).didString,
       name: faker.company.name(),
     });
 
-    nildbAId = builder.nodes.at(0)?.id.toString()! as Did;
-    nildbBId = builder.nodes.at(1)?.id.toString()! as Did;
+    nildbAId = builder.nodes.at(0)?.id.didString!;
+    nildbBId = builder.nodes.at(1)?.id.didString!;
   });
   afterAll(async (_c) => {});
 
@@ -60,12 +60,10 @@ describe("standard-data.test.ts", () => {
     ];
 
     const results = await builder.createStandardData({
-      body: {
-        collection: collection._id,
-        data,
-      },
+      collection: collection._id,
+      data,
     });
-    const pairs = Object.entries(results);
+    const pairs: [string, any][] = Object.entries(results);
 
     expect(Object.keys(results)).toHaveLength(2);
     for (const [_, result] of pairs) {
@@ -96,7 +94,7 @@ describe("standard-data.test.ts", () => {
     const { builder, expect } = c;
 
     // The method now returns a single, unified response.
-    const result = await builder.readCollection(collection._id as Uuid);
+    const result = await builder.readCollection(collection._id);
     expect(result.data._id).toBe(collection._id);
     expect(result.data.count).toBeGreaterThanOrEqual(0);
     expect(result.data.schema).toEqual(collection.schema);
@@ -118,9 +116,59 @@ describe("standard-data.test.ts", () => {
   test("tail data", async ({ c }) => {
     const { builder, expect } = c;
 
-    const results = await builder.tailData(collection._id as Uuid, 5);
+    const results = await builder.tailData(collection._id, { limit: 5 });
     expect(results.data).toHaveLength(1);
     expect(results.data.at(0)?.name).toBe("a");
+  });
+
+  test("can list queries with pagination", async ({ c }) => {
+    const { builder, expect } = c;
+
+    // Create a few extra queries to test pagination
+    for (let i = 0; i < 5; i++) {
+      await builder.createQuery({
+        _id: crypto.randomUUID(),
+        name: `Pagination Test Query ${i}`,
+        collection: collection._id,
+        variables: {},
+        pipeline: [{ $match: {} }],
+      });
+    }
+
+    const paginatedResult = await builder.getQueries({
+      pagination: { limit: 2, offset: 3 },
+    });
+    expect(paginatedResult.data).toHaveLength(2);
+    expect(paginatedResult.pagination.total).toBe(5);
+    expect(paginatedResult.pagination.limit).toBe(2);
+    expect(paginatedResult.pagination.offset).toBe(3);
+    expect(paginatedResult.data[0].name).toContain("Pagination Test Query");
+  });
+
+  test("can find data with pagination", async ({ c }) => {
+    const { builder, expect } = c;
+
+    // Ensure there is enough data
+    const moreData = Array.from({ length: 4 }, () => ({
+      _id: crypto.randomUUID(),
+      name: "find-data-pagination-test",
+    }));
+    await builder.createStandardData({
+      collection: collection._id,
+      data: moreData,
+    });
+    // Total data count is now 5 (1 from initial upload + 4 here)
+
+    const result = await builder.findData({
+      collection: collection._id,
+      filter: { name: "find-data-pagination-test" },
+      pagination: { limit: 2, offset: 1 },
+    });
+
+    expect(result.data).toHaveLength(2);
+    expect(result.pagination.total).toBe(4);
+    expect(result.pagination.limit).toBe(2);
+    expect(result.pagination.offset).toBe(1);
   });
 
   test("create and run query", async ({ c }) => {
@@ -138,12 +186,12 @@ describe("standard-data.test.ts", () => {
       _id: query._id,
       variables: { name: "tim" },
     });
-    const runs = Object.entries(runResults).reduce(
-      (acc, [id, value]) => {
-        acc[id as Did] = value.data as Uuid;
+    const runs = Object.keys(runResults).reduce(
+      (acc, id) => {
+        acc[id] = runResults[id].data;
         return acc;
       },
-      {} as ByNodeName<Uuid>,
+      {} as ByNodeName<string>,
     );
 
     const results = await waitForQueryRun(c, runs);
@@ -156,29 +204,23 @@ describe("standard-data.test.ts", () => {
   test("get queries list and individual query", async ({ c }) => {
     const { builder, expect } = c;
 
-    // Test getQueries() - should return list of queries
-    const queriesList = await builder.getQueries();
+    const queriesListResponse = await builder.getQueries();
 
-    // Should have results from both nodes
-    expect(Object.keys(queriesList)).toHaveLength(2);
-    expect(queriesList[nildbAId]).toBeDefined();
-    expect(queriesList[nildbBId]).toBeDefined();
-
-    // Check that we have at least one query (the one created in previous test)
-    const nodeAQueries = queriesList[nildbAId].data;
-    expect(nodeAQueries).toBeDefined();
-    expect(Array.isArray(nodeAQueries)).toBe(true);
-    expect(nodeAQueries.length).toBeGreaterThan(0);
+    // Check that we have at least one query (the one created in the 'can list queries' test)
+    const allQueries = queriesListResponse.data;
+    expect(allQueries).toBeDefined();
+    expect(Array.isArray(allQueries)).toBe(true);
+    expect(allQueries.length).toBeGreaterThan(0);
 
     // Verify the query summary has expected fields
-    const queryFromList = nodeAQueries.find((q) => q._id === query._id);
+    const queryFromList = allQueries.find((q) => q._id === query._id);
     expect(queryFromList).toBeDefined();
     expect(queryFromList?._id).toBe(query._id);
     expect(queryFromList?.name).toBe(query.name);
     expect(queryFromList?.collection).toBe(collection._id);
 
-    // Test getQuery() - should return single query
-    const singleQuery = await builder.getQuery(query._id as Uuid);
+    // Test getQuery() - should return single query from each node
+    const singleQuery = await builder.getQuery(query._id);
 
     // Should have results from both nodes
     expect(Object.keys(singleQuery)).toHaveLength(2);

@@ -1,12 +1,31 @@
 import {
+  Builder,
   type Command,
-  InvocationBody,
-  type Keypair,
   type Did as NucDid,
-  NucTokenBuilder,
-  NucTokenEnvelopeSchema,
+  type Signer,
 } from "@nillion/nuc";
-import { SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
+import {
+  type AuthContext,
+  SecretVaultBaseClient,
+  type SecretVaultBaseOptions,
+} from "#/base";
+import type { ByNodeName, PaginationQuery } from "#/dto/common";
+import type {
+  CreateDataResponse,
+  CreateOwnedDataRequest,
+} from "#/dto/data.dto";
+import type {
+  DeleteDocumentRequestParams,
+  DeleteDocumentResponse,
+  GrantAccessToDataRequest,
+  GrantAccessToDataResponse,
+  ListDataReferencesResponse,
+  ReadDataRequestParams,
+  ReadDataResponse,
+  ReadUserProfileResponse,
+  RevokeAccessToDataRequest,
+  RevokeAccessToDataResponse,
+} from "#/dto/users.dto";
 import { Log } from "#/logger";
 import {
   type BlindfoldFactoryConfig,
@@ -19,24 +38,7 @@ import {
   processPlaintextResponse,
 } from "./common/cluster";
 import { NucCmd } from "./common/nuc-cmd";
-import { type ByNodeName, Did } from "./common/types";
 import { intoSecondsFromNow } from "./common/utils";
-import type {
-  CreateDataResponse,
-  CreateOwnedDataRequest,
-} from "./dto/data.dto";
-import type {
-  DeleteDocumentRequestParams,
-  DeleteDocumentResponse,
-  GrantAccessToDataRequest,
-  GrantAccessToDataResponse,
-  ListDataReferencesResponse,
-  ReadDataRequestParams,
-  ReadDataResponse,
-  ReadUserProfileResponse,
-  RevokeAccessToDataRequest,
-  RevokeAccessToDataResponse,
-} from "./dto/users.dto";
 import {
   createNilDbUserClient,
   type NilDbUserClient,
@@ -52,7 +54,7 @@ export type SecretVaultUserOptions = SecretVaultBaseOptions<NilDbUserClient>;
  * handling of concealed data when configured with blindfold.
  *
  * @example
- * ```typescript
+ * ```ts
  * const client = await SecretVaultUserClient.from({
  *   keypair: myKeypair,
  *   baseUrls: [
@@ -68,30 +70,31 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Creates and initializes a new SecretVaultUserClient instance.
    *
-   * @param options - Configuration options for the client
-   * @param options.keypair - The user's keypair for authentication
-   * @param options.baseUrls - URL Array of nilDB node endpoints
-   * @param options.blindfold - Optional blindfold configuration for concealed data
-   * @returns A promise that resolves to a configured SecretVaultUserClient
+   * @example
+   * // Basic instantiation with an auto-generated key
+   * const userClient = await SecretVaultUserClient.from({
+   *   signer: Signer.generate(),
+   *   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
+   * });
    *
    * @example
-   * ```typescript
-   * const client = await SecretVaultUserClient.from({
-   *   keypair: myKeypair,
-   *   baseUrls: [
-   *     'https://nildb-stg-n1.nillion.network',
-   *     'https://nildb-stg-n2.nillion.network',
-   *     'https://nildb-stg-n3.nillion.network',
-   *   ],
+   * // Advanced: Using a custom signer from a browser wallet
+   * import { Signer } from "@nillion/nuc";
+   *
+   * // Assumes window.ethereum is available from a browser wallet like MetaMask
+   * const customSigner = await Signer.fromEip1193Provider(window.ethereum);
+   *
+   * const clientWithSigner = await SecretVaultUserClient.from({
+   *   signer: customSigner,
+   *   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
    * });
-   * ```
    */
   static async from(options: {
-    keypair: Keypair;
+    signer: Signer;
     baseUrls: string[];
     blindfold?: BlindfoldFactoryConfig;
   }): Promise<SecretVaultUserClient> {
-    const { baseUrls, keypair, blindfold } = options;
+    const { baseUrls, signer, blindfold } = options;
 
     // Create clients
     const clientPromises = baseUrls.map((u) => createNilDbUserClient(u));
@@ -103,7 +106,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
         // User provided a key
         client = new SecretVaultUserClient({
           clients,
-          keypair,
+          signer,
           key: blindfold.key,
         });
       } else {
@@ -115,7 +118,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
         client = new SecretVaultUserClient({
           clients,
-          keypair,
+          signer,
           key,
         });
       }
@@ -123,13 +126,14 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       // No encryption
       client = new SecretVaultUserClient({
         clients,
-        keypair,
+        signer,
       });
     }
 
+    const did = await signer.getDid();
     Log.info(
       {
-        did: keypair.toDid().toString(),
+        did: did.didString,
         nodes: clients.length,
         encryption: client._options.key?.constructor.name ?? "none",
       },
@@ -142,9 +146,12 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Reads the user's profile information from the cluster.
    */
-  async readProfile(): Promise<ReadUserProfileResponse> {
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+  async readProfile(options?: {
+    auth?: AuthContext;
+  }): Promise<ReadUserProfileResponse> {
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         command: NucCmd.nil.db.users.root,
         audience: client.id,
       });
@@ -152,7 +159,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     });
 
     const result = processPlaintextResponse(resultsByNode);
-    Log.info({ user: this.id }, "User profile read");
+    Log.info({ user: await this.getId() }, "User profile read");
     return result;
   }
 
@@ -160,32 +167,37 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    * Creates one or more data documents owned by the user.
    */
   async createData(
-    delegation: string,
     body: CreateOwnedDataRequest,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<CreateDataResponse>> {
+    if (!options?.auth) {
+      throw new Error(
+        "The 'createData' operation requires an 'AuthContext' containing a delegation token from the collection's builder.",
+      );
+    }
+    const { auth } = options;
+
     const { key, clients } = this._options;
 
     // 1. Prepare map of node-id to node-specific payload.
     const nodePayloads = await prepareRequest({ key, clients, body });
 
     // 2. Execute on all nodes, looking up the payload by node id.
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const envelop = NucTokenEnvelopeSchema.parse(delegation);
-      const token = NucTokenBuilder.extending(envelop)
-        .audience(client.id)
-        .command(NucCmd.nil.db.data.create)
-        .expiresAt(intoSecondsFromNow(60))
-        .body(new InvocationBody({}))
-        .build(this.keypair.privateKey());
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth,
+        command: NucCmd.nil.db.data.create,
+        audience: client.id,
+      });
 
-      const id = Did.parse(client.id.toString());
+      const id = client.id.didString;
       const payload = nodePayloads[id];
       return client.createOwnedData(token, payload);
     });
 
     Log.info(
       {
-        user: this.id,
+        user: await this.getId(),
         collection: body.collection,
         documents: body.data.length,
         concealed: !!key,
@@ -199,19 +211,23 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Lists references to all data documents owned by the user.
    */
-  async listDataReferences(): Promise<ListDataReferencesResponse> {
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+  async listDataReferences(options?: {
+    pagination?: PaginationQuery;
+    auth?: AuthContext;
+  }): Promise<ListDataReferencesResponse> {
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         command: NucCmd.nil.db.users.read,
         audience: client.id,
       });
-      return client.listDataReferences(token);
+      return client.listDataReferences(token, options?.pagination);
     });
 
     const result = processPlaintextResponse(resultsByNode);
 
     Log.info(
-      { user: this.id, count: result.data?.length || 0 },
+      { user: await this.getId(), count: result.data?.length || 0 },
       "User data references listed",
     );
 
@@ -221,10 +237,14 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Reads a single data document, automatically revealing concealed values if a key is configured.
    */
-  async readData(params: ReadDataRequestParams): Promise<ReadDataResponse> {
+  async readData(
+    params: ReadDataRequestParams,
+    options?: { auth?: AuthContext },
+  ): Promise<ReadDataResponse> {
     // 1. Fetch the raw data from all nodes.
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         command: NucCmd.nil.db.users.read,
         audience: client.id,
       });
@@ -248,7 +268,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     Log.info(
       {
-        user: this.id,
+        user: await this.getId(),
         collection: params.collection,
         document: params.document,
       },
@@ -263,9 +283,11 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    */
   async deleteData(
     params: DeleteDocumentRequestParams,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<DeleteDocumentResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         command: NucCmd.nil.db.users.delete,
         audience: client.id,
       });
@@ -274,7 +296,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     Log.info(
       {
-        user: this.id,
+        user: await this.getId(),
         collection: params.collection,
         document: params.document,
       },
@@ -289,9 +311,11 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    */
   async grantAccess(
     body: GrantAccessToDataRequest,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<GrantAccessToDataResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         command: NucCmd.nil.db.users.update,
         audience: client.id,
       });
@@ -300,7 +324,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     Log.info(
       {
-        user: this.id,
+        user: await this.getId(),
         collection: body.collection,
         document: body.document,
         grantee: body.acl.grantee,
@@ -316,9 +340,11 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
    */
   async revokeAccess(
     body: RevokeAccessToDataRequest,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<RevokeAccessToDataResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         command: NucCmd.nil.db.users.update,
         audience: client.id,
       });
@@ -327,7 +353,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     Log.info(
       {
-        user: this.id,
+        user: await this.getId(),
         collection: body.collection,
         document: body.document,
         revokee: body.grantee,
@@ -338,17 +364,40 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     return result;
   }
 
-  private mintInvocation(options: {
-    command: Command;
+  private async getInvocationFor(options: {
+    auth?: AuthContext;
+    command: string;
     audience: NucDid;
-  }): string {
-    const builder = NucTokenBuilder.invocation({});
+  }): Promise<string> {
+    const { auth, command, audience } = options;
 
-    return builder
-      .command(options.command)
-      .subject(this.did)
-      .audience(options.audience)
-      .expiresAt(intoSecondsFromNow(60))
-      .build(this.keypair.privateKey());
+    if (auth?.invocations) {
+      const invocation = auth.invocations[audience.didString];
+      if (invocation) {
+        return Promise.resolve(invocation);
+      }
+      throw new Error(
+        `Invocation for node ${audience.didString} not found in provided 'invocations' map.`,
+      );
+    }
+
+    const signer = auth?.signer ?? this.signer;
+    const expiresAt = intoSecondsFromNow(60);
+
+    if (auth?.delegation) {
+      return Builder.invocationFromString(auth.delegation)
+        .audience(audience)
+        .command(command as Command)
+        .expiresAt(expiresAt)
+        .signAndSerialize(signer);
+    }
+
+    // Fallback to self-signed invocation
+    return Builder.invocation()
+      .command(command as Command)
+      .subject(await this.getDid())
+      .audience(audience)
+      .expiresAt(expiresAt)
+      .signAndSerialize(signer);
   }
 }

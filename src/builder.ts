@@ -1,16 +1,65 @@
 import {
-  type Command,
-  InvocationBody,
-  type Keypair,
-  NilauthClient,
+  Builder,
+  Codec,
+  type Envelope,
+  type NilauthClient,
+  type NilauthTypes,
   type Did as NucDid,
-  NucTokenBuilder,
-  type NucTokenEnvelope,
-  PayerBuilder,
-  type SubscriptionStatusResponse,
+  type Signer,
 } from "@nillion/nuc";
-import { SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
+import {
+  type AuthContext,
+  SecretVaultBaseClient,
+  type SecretVaultBaseOptions,
+} from "#/base";
 import { intoSecondsFromNow } from "#/common/utils";
+import type {
+  DeleteBuilderResponse,
+  ReadBuilderProfileResponse,
+  RegisterBuilderRequest,
+  RegisterBuilderResponse,
+  UpdateBuilderProfileRequest,
+  UpdateBuilderProfileResponse,
+} from "#/dto/builders.dto";
+import type {
+  CreateCollectionIndexRequest,
+  CreateCollectionIndexResponse,
+  CreateCollectionRequest,
+  CreateCollectionResponse,
+  DeleteCollectionResponse,
+  DropCollectionIndexResponse,
+  ListCollectionsResponse,
+  ReadCollectionMetadataResponse,
+} from "#/dto/collections.dto";
+import type {
+  ByNodeName,
+  DidString,
+  Name,
+  PaginationQuery,
+  Uuid,
+} from "#/dto/common";
+import type {
+  CreateDataResponse,
+  CreateStandardDataRequest,
+  DeleteDataRequest,
+  DeleteDataResponse,
+  FindDataRequest,
+  FindDataResponse,
+  FlushDataResponse,
+  TailDataResponse,
+  UpdateDataRequest,
+  UpdateDataResponse,
+} from "#/dto/data.dto";
+import type {
+  CreateQueryRequest,
+  CreateQueryResponse,
+  DeleteQueryResponse,
+  ReadQueriesResponse,
+  ReadQueryResponse,
+  ReadQueryRunByIdResponse,
+  RunQueryRequest,
+  RunQueryResponse,
+} from "#/dto/queries.dto";
 import { Log } from "#/logger";
 import {
   type BlindfoldFactoryConfig,
@@ -23,48 +72,6 @@ import {
   processPlaintextResponse,
 } from "./common/cluster";
 import { NucCmd } from "./common/nuc-cmd";
-import { type ByNodeName, Did, type Uuid } from "./common/types";
-import type {
-  DeleteBuilderResponse,
-  ReadBuilderProfileResponse,
-  RegisterBuilderRequest,
-  RegisterBuilderResponse,
-  UpdateBuilderProfileRequest,
-  UpdateBuilderProfileResponse,
-} from "./dto/builders.dto";
-import type {
-  CreateCollectionIndexRequest,
-  CreateCollectionIndexResponse,
-  CreateCollectionRequest,
-  CreateCollectionResponse,
-  DeleteCollectionResponse,
-  DropCollectionIndexResponse,
-  ListCollectionsResponse,
-  ReadCollectionMetadataResponse,
-} from "./dto/collections.dto";
-import type { Name } from "./dto/common";
-import type {
-  CreateDataResponse,
-  CreateStandardDataRequest,
-  DeleteDataRequest,
-  DeleteDataResponse,
-  FindDataRequest,
-  FindDataResponse,
-  FlushDataResponse,
-  TailDataResponse,
-  UpdateDataRequest,
-  UpdateDataResponse,
-} from "./dto/data.dto";
-import type {
-  CreateQueryRequest,
-  CreateQueryResponse,
-  DeleteQueryResponse,
-  ReadQueriesResponse,
-  ReadQueryResponse,
-  ReadQueryRunByIdResponse,
-  RunQueryRequest,
-  RunQueryResponse,
-} from "./dto/queries.dto";
 import {
   createNilDbBuilderClient,
   type NilDbBuilderClient,
@@ -76,6 +83,7 @@ import {
 export type SecretVaultBuilderOptions =
   SecretVaultBaseOptions<NilDbBuilderClient> & {
     nilauthClient: NilauthClient;
+    rootToken?: Envelope | string;
   };
 
 /**
@@ -84,75 +92,60 @@ export type SecretVaultBuilderOptions =
  * This client handles all builder-specific operations including registration,
  * collection management, data operations, and query execution. It supports
  * automatic handling of concealed data when configured with blindfold.
- *
- * @example
- * ```typescript
- * const client = await SecretVaultBuilderClient.from({
- *   keypair: myKeypair,
- *   urls: {
- *     chain: "http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz",
- *     auth: "https://nilauth.sandbox.app-cluster.sandbox.nilogy.xyz",
- *     dbs: ["https://nildb-stg-n1.nillion.network", "https://nildb-stg-n2.nillion.network", "https://nildb-stg-n3.nillion.network"]
- *   }
- * });
- * ```
  */
 export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilderClient> {
   /**
    * Creates and initializes a new SecretVaultBuilderClient instance.
    *
-   * @param options - Configuration options for the client
-   * @param options.keypair - The builder's keypair for authentication
-   * @param options.urls - Nillion service URLs configuration from https://docs.nillion.com/build/network-config
-   * @param options.urls.chain - URL of the nilChain URL
-   * @param options.urls.auth - URL of the nilAuth authentication service
-   * @param options.urls.dbs - URL Array of nilDB node endpoints
-   * @param options.blindfold - Optional blindfold configuration for concealed data
-   * @returns A promise that resolves to a configured SecretVaultBuilderClient
+   * @example
+   * // Basic instantiation with an auto-generated key
+   * const builderClient = await SecretVaultBuilderClient.from({
+   *   signer: Signer.generate(),
+   *   nilauthClient,
+   *   dbs: ["http://localhost:40081", "http://localhost:40082"],
+   * });
    *
    * @example
-   * ```typescript
-   * const client = await SecretVaultBuilderClient.from({
-   *   keypair: myKeypair,
-   *   urls: {
-   *     chain: "http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz",
-   *     auth: "https://nilauth.sandbox.app-cluster.sandbox.nilogy.xyz",
-   *     dbs: ["https://nildb-stg-n1.nillion.network", "https://nildb-stg-n2.nillion.network", "https://nildb-stg-n3.nillion.network"]
-   *   },
-   *   blindfold: {
-   *     // optional blindfold config
-   *   }
+   * // Advanced: Using a custom signer from a browser wallet
+   * import { Signer } from "@nillion/nuc";
+   *
+   * // Assumes window.ethereum is available from a browser wallet like MetaMask
+   * const customSigner = await Signer.fromEip1193Provider(window.ethereum);
+   *
+   * const clientWithSigner = await SecretVaultBuilderClient.from({
+   *   signer: customSigner,
+   *   nilauthClient,
+   *   dbs: ["http://localhost:40081", "http://localhost:40082"],
    * });
-   * ```
    */
   static async from(options: {
-    keypair: Keypair;
-    urls: {
-      chain: string;
-      auth: string;
-      dbs: string[];
-    };
+    signer: Signer;
+    nilauthClient: NilauthClient;
+    dbs: string[];
     blindfold?: BlindfoldFactoryConfig;
+    rootToken?: Envelope | string;
   }): Promise<SecretVaultBuilderClient> {
-    const { urls, keypair, blindfold } = options;
+    const {
+      dbs: baseUrls,
+      signer,
+      blindfold,
+      nilauthClient,
+      rootToken,
+    } = options;
+
+    const did = await signer.getDid();
 
     Log.debug(
       {
-        did: keypair.toDid().toString(),
-        dbCount: urls.dbs.length,
+        did: did.didString,
+        dbCount: baseUrls.length,
         blindfold: !!blindfold,
       },
       "Creating SecretVaultBuilderClient",
     );
 
-    const payerBuilder = await new PayerBuilder()
-      .keypair(keypair)
-      .chainUrl(urls.chain)
-      .build();
-    const nilauthClient = await NilauthClient.from(urls.auth, payerBuilder);
-
     // Create clients for each node
-    const clientPromises = urls.dbs.map((base) =>
+    const clientPromises = baseUrls.map((base) =>
       createNilDbBuilderClient(base),
     );
     const clients = await Promise.all(clientPromises);
@@ -163,9 +156,10 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
         // User provided a key
         client = new SecretVaultBuilderClient({
           clients,
-          keypair,
+          signer,
           key: blindfold.key,
           nilauthClient,
+          rootToken,
         });
       } else {
         // Create a new key
@@ -176,23 +170,26 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
         client = new SecretVaultBuilderClient({
           clients,
-          keypair,
+          signer,
           key,
           nilauthClient,
+          rootToken,
         });
       }
     } else {
       // No encryption
       client = new SecretVaultBuilderClient({
         clients,
-        keypair,
+        signer,
         nilauthClient,
+        rootToken,
       });
     }
 
+    const clientDid = await client.getDid();
     Log.info(
       {
-        id: keypair.toDid().toString().slice(-8),
+        id: clientDid.didString.slice(-8),
         nodes: clients.length,
         encryption: client._options.key?.constructor.name ?? "none",
       },
@@ -202,15 +199,26 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     return client;
   }
 
-  #rootToken: NucTokenEnvelope | null = null;
+  #rootToken: Envelope | null = null;
   #nilauthClient: NilauthClient;
 
   constructor(options: SecretVaultBuilderOptions) {
     super(options);
     this.#nilauthClient = options.nilauthClient;
+
+    // Handle rootToken re-hydration
+    if (options.rootToken) {
+      if (typeof options.rootToken === "string") {
+        this.#rootToken = Codec.decodeBase64Url(options.rootToken);
+        Log.debug("Root token re-hydrated from string");
+      } else {
+        this.#rootToken = options.rootToken;
+        Log.debug("Root token re-hydrated from Envelope object");
+      }
+    }
   }
 
-  get rootToken(): NucTokenEnvelope {
+  get rootToken(): Envelope {
     if (!this.#rootToken) {
       throw new Error("`refreshRootToken` must be called first");
     }
@@ -222,23 +230,20 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async refreshRootToken(): Promise<void> {
     Log.debug("Refreshing root token");
-    const { token } = await this.#nilauthClient.requestToken(
-      this._options.keypair,
+    const response = await this.#nilauthClient.requestToken(
+      this._options.signer,
       "nildb",
     );
 
-    this.#rootToken = token;
-    Log.info({ builder: this.id }, "Root token refreshed");
+    this.#rootToken = response.token;
+    Log.info({ builder: await this.getId() }, "Root token refreshed");
   }
 
   /**
    * Checks subscription status by the builder's Did.
    */
-  subscriptionStatus(): Promise<SubscriptionStatusResponse> {
-    return this.#nilauthClient.subscriptionStatus(
-      this.keypair.publicKey("hex"),
-      "nildb",
-    );
+  async subscriptionStatus(): Promise<NilauthTypes.SubscriptionStatusResponse> {
+    return this.#nilauthClient.subscriptionStatus(await this.getDid(), "nildb");
   }
 
   /**
@@ -248,16 +253,19 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     body: RegisterBuilderRequest,
   ): Promise<ByNodeName<RegisterBuilderResponse>> {
     const result = await executeOnCluster(this.nodes, (c) => c.register(body));
-    Log.info({ builder: this.id }, "Builder registered");
+    Log.info({ builder: await this.getId() }, "Builder registered");
     return result;
   }
 
   /**
    * Reads the builder's profile from the cluster.
    */
-  async readProfile(): Promise<ReadBuilderProfileResponse> {
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+  async readProfile(options?: {
+    auth?: AuthContext;
+  }): Promise<ReadBuilderProfileResponse> {
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.builders.read,
       });
@@ -266,7 +274,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     });
 
     const result = processPlaintextResponse(resultsByNode);
-    Log.info({ builder: this.id }, "Builder profile read");
+    Log.info({ builder: await this.getId() }, "Builder profile read");
     return result;
   }
 
@@ -275,9 +283,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async updateBuilderProfile(
     body: UpdateBuilderProfileRequest,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<UpdateBuilderProfileResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.builders.update,
       });
@@ -286,7 +296,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     });
 
     Log.info(
-      { builder: this.id, updateFields: Object.keys(body) },
+      { builder: await this.getId(), updateFields: Object.keys(body) },
       "Builder profile updated",
     );
     return result;
@@ -295,9 +305,12 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Deletes the builder and associated resources from all nodes.
    */
-  async deleteBuilder(): Promise<ByNodeName<DeleteBuilderResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+  async deleteBuilder(options?: {
+    auth?: AuthContext;
+  }): Promise<ByNodeName<DeleteBuilderResponse>> {
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.builders.delete,
       });
@@ -305,7 +318,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.deleteBuilder(token);
     });
 
-    Log.info({ builder: this.id }, "Builder deleted");
+    Log.info({ builder: await this.getId() }, "Builder deleted");
     return result;
   }
 
@@ -314,9 +327,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async createCollection(
     body: CreateCollectionRequest,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<CreateCollectionResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.create,
       });
@@ -324,28 +339,35 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.createCollection(token, body);
     });
 
-    Log.info({ builder: this.id, collection: body.name }, "Collection created");
+    Log.info(
+      { builder: await this.getId(), collection: body.name },
+      "Collection created",
+    );
     return result;
   }
 
   /**
    * Reads a list of all collections from the cluster.
    */
-  async readCollections(): Promise<ListCollectionsResponse> {
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+  async readCollections(options?: {
+    pagination?: PaginationQuery;
+    auth?: AuthContext;
+  }): Promise<ListCollectionsResponse> {
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.read,
       });
 
-      return client.readCollections(token);
+      return client.readCollections(token, options?.pagination);
     });
 
     const result = processPlaintextResponse(resultsByNode);
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         count: result.data?.length || 0,
       },
       "Collections read",
@@ -359,9 +381,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async readCollection(
     collection: Uuid,
+    options?: { auth?: AuthContext },
   ): Promise<ReadCollectionMetadataResponse> {
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.read,
       });
@@ -371,7 +395,10 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     const result = processPlaintextResponse(resultsByNode);
 
-    Log.info({ builder: this.id, collection }, "Collection metadata read");
+    Log.info(
+      { builder: await this.getId(), collection },
+      "Collection metadata read",
+    );
     return result;
   }
 
@@ -380,9 +407,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async deleteCollection(
     collection: Uuid,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<DeleteCollectionResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.delete,
       });
@@ -390,7 +419,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.deleteCollection(token, collection);
     });
 
-    Log.info({ builder: this.id, collection }, "Collection deleted");
+    Log.info({ builder: await this.getId(), collection }, "Collection deleted");
     return result;
   }
 
@@ -400,9 +429,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   async createCollectionIndex(
     collection: Uuid,
     body: CreateCollectionIndexRequest,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<CreateCollectionIndexResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.update,
       });
@@ -412,7 +443,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         collection,
         name: body.name,
       },
@@ -428,9 +459,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   async dropCollectionIndex(
     collection: Uuid,
     index: Name,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<DropCollectionIndexResponse>> {
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.collections.update,
       });
@@ -440,7 +473,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         collection,
         index,
       },
@@ -453,25 +486,22 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Creates one or more standard data documents in a collection.
    */
-  async createStandardData(options: {
-    body: CreateStandardDataRequest;
-    delegation?: string;
-  }): Promise<ByNodeName<CreateDataResponse>> {
-    const { body, delegation } = options;
+  async createStandardData(
+    body: CreateStandardDataRequest,
+    options?: { auth?: AuthContext },
+  ): Promise<ByNodeName<CreateDataResponse>> {
     const { key, clients } = this._options;
 
     const nodePayloads = await prepareRequest({ key, clients, body });
 
-    const result = await executeOnCluster(this.nodes, (client) => {
-      let token = delegation;
-      if (!token) {
-        token = this.mintRootInvocation({
-          audience: client.id,
-          command: NucCmd.nil.db.data.create,
-        });
-      }
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
+        audience: client.id,
+        command: NucCmd.nil.db.data.create,
+      });
 
-      const id = Did.parse(client.id.toString());
+      const id = client.id.didString as DidString;
       const payload = nodePayloads[id];
       return client.createStandardData(token, payload);
     });
@@ -480,7 +510,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       {
         collection: body.collection,
         count: body.data.length,
-        builder: this.id,
+        builder: await this.getId(),
         isConcealed: !!key,
       },
       "Data created",
@@ -492,26 +522,39 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Retrieves a list of all saved queries.
    */
-  async getQueries(): Promise<ByNodeName<ReadQueriesResponse>> {
-    const result = await executeOnCluster(this.nodes, async (client) => {
-      const token = this.mintRootInvocation({
+  async getQueries(options?: {
+    pagination?: PaginationQuery;
+    auth?: AuthContext;
+  }): Promise<ReadQueriesResponse> {
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.read,
       });
 
-      return client.getQueries(token);
+      return client.getQueries(token, options?.pagination);
     });
 
-    Log.info({ builder: this.id }, "Queries read");
+    const result = processPlaintextResponse(resultsByNode);
+
+    Log.info(
+      { builder: await this.getId(), count: result.data?.length || 0 },
+      "Queries read",
+    );
     return result;
   }
 
   /**
    * Retrieves a single saved query by its id.
    */
-  async getQuery(query: Uuid): Promise<ByNodeName<ReadQueryResponse>> {
+  async getQuery(
+    query: Uuid,
+    options?: { auth?: AuthContext },
+  ): Promise<ByNodeName<ReadQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
-      const token = this.mintRootInvocation({
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.read,
       });
@@ -519,7 +562,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.getQuery(token, query);
     });
 
-    Log.info({ query, builder: this.id }, "Query read");
+    Log.info({ query, builder: await this.getId() }, "Query read");
     return result;
   }
 
@@ -528,9 +571,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async createQuery(
     body: CreateQueryRequest,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<CreateQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
-      const token = this.mintRootInvocation({
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.create,
       });
@@ -540,7 +585,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         name: body.name,
         id: body._id,
         collection: body.collection,
@@ -554,9 +599,13 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Deletes a saved query from all nodes.
    */
-  async deleteQuery(query: Uuid): Promise<ByNodeName<DeleteQueryResponse>> {
+  async deleteQuery(
+    query: Uuid,
+    options?: { auth?: AuthContext },
+  ): Promise<ByNodeName<DeleteQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
-      const token = this.mintRootInvocation({
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.delete,
       });
@@ -564,16 +613,20 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.deleteQuery(token, query);
     });
 
-    Log.info({ builder: this.id, query }, "Query deleted");
+    Log.info({ builder: await this.getId(), query }, "Query deleted");
     return result;
   }
 
   /**
    * Starts a query execution job.
    */
-  async runQuery(body: RunQueryRequest): Promise<ByNodeName<RunQueryResponse>> {
+  async runQuery(
+    body: RunQueryRequest,
+    options?: { auth?: AuthContext },
+  ): Promise<ByNodeName<RunQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
-      const token = this.mintRootInvocation({
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.execute,
       });
@@ -583,7 +636,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         query: body._id,
         run: Object.values(result)[0]?.data,
       },
@@ -597,14 +650,16 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   readQueryRunResults(
     runs: ByNodeName<Uuid>,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<ReadQueryRunByIdResponse>> {
     return executeOnCluster(this.nodes, async (client) => {
-      const token = this.mintRootInvocation({
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.queries.read,
       });
 
-      const id = Did.parse(client.id.toString());
+      const id = client.id.didString as DidString;
       const run = runs[id];
       return client.readQueryRunResults(token, run);
     });
@@ -613,9 +668,13 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Finds data in a collection, revealing concealed values if a key is configured.
    */
-  async findData(body: FindDataRequest): Promise<FindDataResponse> {
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+  async findData(
+    body: FindDataRequest,
+    options?: { auth?: AuthContext },
+  ): Promise<FindDataResponse> {
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.read,
       });
@@ -628,14 +687,18 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     if (key) {
       const data = await processConcealedListResponse({ key, resultsByNode });
-      result = { data };
+      const firstResponse = Object.values(resultsByNode)[0];
+      result = {
+        data,
+        pagination: firstResponse.pagination,
+      };
     } else {
       result = processPlaintextResponse(resultsByNode);
     }
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         collection: body.collection,
         count: result.data?.length || 0,
       },
@@ -650,23 +713,25 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async updateData(
     body: UpdateDataRequest,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<UpdateDataResponse>> {
     const { key, clients } = this._options;
 
     const nodePayloads = await prepareRequest({ key, clients, body });
-    const result = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.update,
       });
 
-      const id = client.id.toString() as Did;
+      const id = client.id.didString as DidString;
       return client.updateData(token, nodePayloads[id]);
     });
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         collection: body.collection,
         filter: body.filter,
       },
@@ -681,9 +746,11 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async deleteData(
     body: DeleteDataRequest,
+    options?: { auth?: AuthContext },
   ): Promise<ByNodeName<DeleteDataResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
-      const token = this.mintRootInvocation({
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.delete,
       });
@@ -693,7 +760,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     Log.info(
       {
-        builder: this.id,
+        builder: await this.getId(),
         collection: body.collection,
         filter: body.filter,
       },
@@ -706,9 +773,13 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Deletes all data from a collection.
    */
-  async flushData(collection: Uuid): Promise<ByNodeName<FlushDataResponse>> {
+  async flushData(
+    collection: Uuid,
+    options?: { auth?: AuthContext },
+  ): Promise<ByNodeName<FlushDataResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
-      const token = this.mintRootInvocation({
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.delete,
       });
@@ -723,11 +794,16 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Reads the last N documents from a collection, revealing concealed values if a key is configured.
    */
-  async tailData(collection: Uuid, limit = 10): Promise<TailDataResponse> {
+  async tailData(
+    collection: Uuid,
+    options?: { limit?: number; auth?: AuthContext },
+  ): Promise<TailDataResponse> {
+    const limit = options?.limit ?? 10;
     Log.debug({ collection, limit }, "Tailing data");
 
-    const resultsByNode = await executeOnCluster(this.nodes, (client) => {
-      const token = this.mintRootInvocation({
+    const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
         audience: client.id,
         command: NucCmd.nil.db.data.read,
       });
@@ -749,15 +825,40 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     return result;
   }
 
-  private mintRootInvocation(options: {
+  private async getInvocationFor(options: {
+    auth?: AuthContext;
     audience: NucDid;
-    command: Command;
-  }): string {
-    return NucTokenBuilder.extending(this.rootToken)
-      .command(options.command)
-      .body(new InvocationBody({}))
-      .expiresAt(intoSecondsFromNow(60))
-      .audience(options.audience)
-      .build(this.keypair.privateKey());
+    command: string;
+  }): Promise<string> {
+    const { auth, audience, command } = options;
+
+    if (auth?.invocations) {
+      const invocation = auth.invocations[audience.didString];
+      if (invocation) {
+        return Promise.resolve(invocation);
+      }
+      throw new Error(
+        `Invocation for node ${audience.didString} not found in provided 'invocations' map.`,
+      );
+    }
+
+    const signer = auth?.signer ?? this.signer;
+    const expiresAt = intoSecondsFromNow(60);
+
+    if (auth?.delegation) {
+      const envelope = Codec.decodeBase64Url(auth.delegation);
+      return Builder.invocationFrom(envelope)
+        .audience(audience)
+        .command(command)
+        .expiresAt(expiresAt)
+        .signAndSerialize(signer);
+    }
+
+    // Fallback to root token
+    return Builder.invocationFrom(this.rootToken)
+      .command(command)
+      .expiresAt(expiresAt)
+      .audience(audience)
+      .signAndSerialize(signer);
   }
 }

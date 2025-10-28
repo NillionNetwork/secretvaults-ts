@@ -1,12 +1,16 @@
 import { z } from "zod";
-import { Did } from "#/common/types";
-import { ApiSuccessResponse } from "./common";
+import {
+  ApiSuccessResponse,
+  DidString,
+  PaginatedResponse,
+  PaginationQuerySchema,
+} from "./common";
 
 /**
  * Access control list entry.
  */
 export const AclDto = z.object({
-  grantee: Did,
+  grantee: DidString,
   read: z.boolean(),
   write: z.boolean(),
   execute: z.boolean(),
@@ -17,7 +21,7 @@ export type AclDto = z.infer<typeof AclDto>;
  * User profile data.
  */
 const UserProfileData = z.object({
-  _id: Did,
+  _id: DidString,
   _created: z.iso.datetime(),
   _updated: z.iso.datetime(),
   logs: z.array(
@@ -57,7 +61,7 @@ const OwnedDataDto = z
     _id: z.uuid(),
     _created: z.iso.datetime(),
     _updated: z.iso.datetime(),
-    _owner: Did,
+    _owner: DidString,
     _acl: z.array(AclDto),
   });
 
@@ -68,16 +72,24 @@ export type ReadDataResponse = z.infer<typeof ReadDataResponse>;
  * Data document reference.
  */
 const DataDocumentReference = z.object({
-  builder: Did,
+  builder: DidString,
   collection: z.uuid(),
   document: z.uuid(),
 });
 
 /**
+ * User data references list request query parameters.
+ */
+export const ListDataReferencesRequestQuery = PaginationQuerySchema;
+export type ListDataReferencesRequestQuery = z.infer<
+  typeof ListDataReferencesRequestQuery
+>;
+
+/**
  * User data references response.
  */
-export const ListDataReferencesResponse = ApiSuccessResponse(
-  z.array(DataDocumentReference),
+export const ListDataReferencesResponse = PaginatedResponse(
+  DataDocumentReference,
 );
 
 export type ListDataReferencesResponse = z.infer<
@@ -121,7 +133,7 @@ export type GrantAccessToDataResponse = z.infer<
  * Revoke data access request.
  */
 export const RevokeAccessToDataRequest = z.object({
-  grantee: Did,
+  grantee: DidString,
   collection: z.uuid(),
   document: z.uuid(),
 });

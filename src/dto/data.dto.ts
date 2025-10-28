@@ -1,13 +1,17 @@
 import { z } from "zod";
-import { Did } from "#/common/types";
-import { ApiSuccessResponse } from "./common";
+import {
+  ApiSuccessResponse,
+  DidString,
+  PaginatedResponse,
+  PaginationBodySchema,
+} from "./common";
 import { AclDto } from "./users.dto";
 
 /**
  * Owned data creation request.
  */
 export const CreateOwnedDataRequest = z.object({
-  owner: Did,
+  owner: DidString,
   collection: z.uuid(),
   data: z.array(z.record(z.string(), z.unknown())).min(1),
   acl: AclDto,
@@ -71,14 +75,15 @@ export type UpdateDataResponse = z.infer<typeof UpdateDataResponse>;
 export const FindDataRequest = z.object({
   collection: z.uuid(),
   filter: z.record(z.string(), z.unknown()),
+  ...PaginationBodySchema.shape,
 });
 export type FindDataRequest = z.infer<typeof FindDataRequest>;
 
 /**
  * Data find response.
  */
-export const FindDataResponse = ApiSuccessResponse(
-  z.array(z.record(z.string(), z.unknown())),
+export const FindDataResponse = PaginatedResponse(
+  z.record(z.string(), z.unknown()),
 );
 export type FindDataResponse = z.infer<typeof FindDataResponse>;
 

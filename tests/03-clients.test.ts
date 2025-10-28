@@ -1,7 +1,7 @@
 import * as crypto from "node:crypto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
-import type { Did, Uuid } from "#/common/types";
+import type { DidString } from "#/dto/common";
 import collectionJson from "./data/owned.collection.json";
 import queryJson from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -9,17 +9,17 @@ import { createFixture } from "./fixture/fixture";
 describe("clients.test.ts", () => {
   const { test, beforeAll, afterAll } = createFixture();
 
-  collectionJson._id = crypto.randomUUID().toString() as Uuid;
-  queryJson._id = crypto.randomUUID().toString() as Uuid;
+  collectionJson._id = crypto.randomUUID().toString();
+  queryJson._id = crypto.randomUUID().toString();
 
-  let nildbAId: Did;
-  let nildbBId: Did;
+  let nildbAId: DidString;
+  let nildbBId: DidString;
 
   beforeAll(async (c) => {
     const { builder } = c;
 
-    nildbAId = builder.nodes.at(0)?.id.toString()! as Did;
-    nildbBId = builder.nodes.at(1)?.id.toString()! as Did;
+    nildbAId = builder.nodes.at(0)?.id.didString! as DidString;
+    nildbBId = builder.nodes.at(1)?.id.didString! as DidString;
   });
   afterAll(async (_c) => {});
 
@@ -67,7 +67,7 @@ describe("clients.test.ts", () => {
 
       const results = await builder.register({
         name: faker.company.name(),
-        did: builder.did.toString() as Did,
+        did: (await builder.getDid()).didString,
       });
 
       const nildbA = results[nildbAId]!;
@@ -81,7 +81,7 @@ describe("clients.test.ts", () => {
       const { builder, expect } = c;
 
       const { data: profile } = await builder.readProfile();
-      expect(profile._id).toBe(builder.did.toString());
+      expect(profile._id).toBe((await builder.getDid()).didString);
     });
   });
 });

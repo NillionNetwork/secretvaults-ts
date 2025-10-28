@@ -1,20 +1,11 @@
 import pino, { type Logger } from "pino";
 import { vi } from "vitest";
-import type { ByNodeName, Uuid } from "#/common/types";
+import type { ByNodeName, Uuid } from "#/dto/common";
 import type { ReadQueryRunByIdResponse } from "#/dto/queries.dto";
 import type { FixtureContext } from "./fixture";
 
 export function createTestLogger(): Logger {
-  return pino({
-    transport: {
-      target: "pino-pretty",
-      options: {
-        sync: true,
-        singleLine: true,
-        messageFormat: "fixture - {msg}",
-      },
-    },
-  });
+  return pino();
 }
 
 export function waitForQueryRun(

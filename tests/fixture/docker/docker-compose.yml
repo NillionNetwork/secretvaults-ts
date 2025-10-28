@@ -1,13 +1,13 @@
 services:
   nilchain:
-    image: ghcr.io/nillionnetwork/nilchain-devnet:v0.1.0
+    image: ghcr.io/nillionnetwork/nilchain-devnet:main
     volumes:
       - ./nilchaind/config/genesis.json:/opt/nilchain/config/genesis.json
     ports:
-      - "40648:26648" # JSON RPC
+      - "40648:26648" # json rpc
 
   nilauth:
-    image: public.ecr.aws/k5d9x2g2/nilauth:latest
+    image: public.ecr.aws/k5d9x2g2/nilauth:main
     depends_on:
       - postgres
       - nilchain
@@ -15,11 +15,11 @@ services:
       - ./nilauth/config.yaml:/opt/config.yaml
     command: ["--config-file", "/opt/config.yaml"]
     ports:
-      - "40921:8080" # main server
-      - "40922:8081" # metrics server
+      - "40921:8080" # main api
+      - "40922:8081" # metrics
 
   postgres:
-    image: postgres:17
+    image: postgres:18
     environment:
       POSTGRES_PASSWORD: postgres
     ports:
@@ -33,7 +33,7 @@ services:
       caddy respond --listen :80 --body '{"nillion":{"usd":1}}' --header "Content-Type: application/json" 
 
   nildb-1:
-    image: public.ecr.aws/k5d9x2g2/nildb-api:747922ab4d3adb442b6c15155bf85ede3bb9ba7f
+    image: public.ecr.aws/k5d9x2g2/nildb-api:main
     depends_on:
       - mongo
     ports:
@@ -46,12 +46,13 @@ services:
       - APP_METRICS_PORT=9091
       - APP_NILAUTH_BASE_URL=http://nilauth:8080
       - APP_NILAUTH_PUBLIC_KEY=03520e70bd97a5fa6d70c614d50ee47bf445ae0b0941a1d61ddd5afa022b97ab14
-      - APP_NODE_PUBLIC_ENDPOINT=http://localhost:40081
+      - APP_NODE_PUBLIC_ENDPOINT=http://127.0.0.1:40081
       - APP_NODE_SECRET_KEY=6cab2d10ac21886404eca7cbd40f1777071a243177eae464042885b391412b4e
       - APP_PORT=8080
+      - APP_RATE_LIMIT_ENABLED=false
 
   nildb-2:
-    image: public.ecr.aws/k5d9x2g2/nildb-api:747922ab4d3adb442b6c15155bf85ede3bb9ba7f
+    image: public.ecr.aws/k5d9x2g2/nildb-api:main
     depends_on:
       - mongo
     ports:
@@ -64,9 +65,10 @@ services:
       - APP_METRICS_PORT=9091
       - APP_NILAUTH_BASE_URL=http://nilauth:8080
       - APP_NILAUTH_PUBLIC_KEY=03520e70bd97a5fa6d70c614d50ee47bf445ae0b0941a1d61ddd5afa022b97ab14
-      - APP_NODE_PUBLIC_ENDPOINT=http://localhost:40082
+      - APP_NODE_PUBLIC_ENDPOINT=http://127.0.0.1:40082
       - APP_NODE_SECRET_KEY=91771a344f5caa0b89bcb89e2d59f63e99ab0ff05f8519d839d600747638cf6c
       - APP_PORT=8080
+      - APP_RATE_LIMIT_ENABLED=false
 
   mongo:
     image: mongo:8

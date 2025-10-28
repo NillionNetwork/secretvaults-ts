@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { ApiSuccessResponse } from "./common";
+import {
+  ApiSuccessResponse,
+  PaginatedResponse,
+  PaginationQuerySchema,
+} from "./common";
 
 /**
  * MongoDB aggregation pipeline variable validation.
@@ -48,11 +52,15 @@ const QueryDocumentResponse = z.object({
 });
 
 /**
+ * Queries list request query parameters.
+ */
+export const ReadQueriesRequestQuery = PaginationQuerySchema;
+export type ReadQueriesRequestQuery = z.infer<typeof ReadQueriesRequestQuery>;
+
+/**
  * Queries list response.
  */
-export const ReadQueriesResponse = ApiSuccessResponse(
-  z.array(QueryDocumentResponse),
-);
+export const ReadQueriesResponse = PaginatedResponse(QueryDocumentResponse);
 export type ReadQueriesResponse = z.infer<typeof ReadQueriesResponse>;
 
 /**
@@ -114,5 +122,22 @@ const ReadQueryRunByIdDto = z.object({
   errors: z.array(z.string()).optional(),
 });
 
-export const ReadQueryRunByIdResponse = ApiSuccessResponse(ReadQueryRunByIdDto);
+/**
+ * Query run read request query parameters.
+ */
+export const ReadQueryRunByIdRequestQuery = PaginationQuerySchema;
+export type ReadQueryRunByIdRequestQuery = z.infer<
+  typeof ReadQueryRunByIdRequestQuery
+>;
+
+export const ReadQueryRunByIdResponse = z.object({
+  data: ReadQueryRunByIdDto,
+  pagination: z
+    .object({
+      total: z.number().int().min(0),
+      limit: z.number().int().min(1),
+      offset: z.number().int().min(0),
+    })
+    .optional(),
+});
 export type ReadQueryRunByIdResponse = z.infer<typeof ReadQueryRunByIdResponse>;
