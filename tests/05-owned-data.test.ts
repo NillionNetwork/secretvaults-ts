@@ -139,7 +139,7 @@ describe("owned-data.test.ts", () => {
     expect(result.data).toHaveLength(1);
     expect(result.data.at(0)?.document).toBe(record._id);
     expect(result.pagination.total).toBe(1);
-    expect(result.pagination.limit).toBe(25);
+    expect(result.pagination.limit).toBe(1_000);
     expect(result.pagination.offset).toBe(0);
   });
 
