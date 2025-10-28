@@ -25,7 +25,7 @@
     "es-toolkit": "^1.39.8",
     "zod": "^4.1.11",
     "@nillion/blindfold": "0.1.0",
-    "@nillion/nuc": "1.0.0-rc.4",
+    "@nillion/nuc": "1.0.0",
     "pino": "^9.13.1",
     "pino-pretty": "^13.1.1",
     "uuid": "^13.0.0"
