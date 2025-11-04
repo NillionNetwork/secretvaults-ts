@@ -25,6 +25,8 @@ import type {
   ReadUserProfileResponse,
   RevokeAccessToDataRequest,
   RevokeAccessToDataResponse,
+  UpdateUserDataRequest,
+  UpdateUserDataResponse,
 } from "#/dto/users.dto";
 import { Log } from "#/logger";
 import {
@@ -274,6 +276,27 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       },
       "User data read",
     );
+
+    return result;
+  }
+
+  /**
+   * Updates a user-owned document from all nodes.
+   */
+  async updateData(
+    body: UpdateUserDataRequest,
+    options?: { auth?: AuthContext },
+  ): Promise<ByNodeName<UpdateUserDataResponse>> {
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
+        command: NucCmd.nil.db.users.update,
+        audience: client.id,
+      });
+      return client.updateData(token, body);
+    });
+
+    Log.info(result, "User data updated");
 
     return result;
   }
