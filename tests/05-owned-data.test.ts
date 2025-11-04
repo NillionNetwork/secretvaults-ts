@@ -297,7 +297,7 @@ describe("owned-data.test.ts", () => {
       name,
     };
 
-    const results = await user.createData(
+    await user.createData(
       {
         owner: userDid.didString,
         acl: {
@@ -311,7 +311,7 @@ describe("owned-data.test.ts", () => {
       },
       { auth: { delegation } },
     );
-    
+
     // retrieve original document
     const createdDocument = await user.readData({
       collection: collection._id,
@@ -325,10 +325,10 @@ describe("owned-data.test.ts", () => {
       collection: collection._id,
       document: recordId,
       update: {
-        "$set": {
-          "name": newName
-        }
-      }
+        $set: {
+          name: newName,
+        },
+      },
     });
 
     // retrieve updated document
@@ -338,7 +338,6 @@ describe("owned-data.test.ts", () => {
     });
 
     expect(updatedDocument.data.name).toBe(newName);
-    
   });
 
   test("user can delete their data", async ({ c }) => {

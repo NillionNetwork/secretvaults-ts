@@ -18,7 +18,7 @@ import {
   type RevokeAccessToDataRequest,
   RevokeAccessToDataResponse,
   type UpdateUserDataRequest,
-  UpdateUserDataResponse
+  UpdateUserDataResponse,
 } from "#/dto/users.dto";
 import { NilDbBaseClient, NilDbBaseClientOptions } from "./base-client";
 

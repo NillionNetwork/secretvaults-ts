@@ -296,10 +296,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       return client.updateData(token, body);
     });
 
-    Log.info(
-      result,
-      "User data updated",
-    );
+    Log.info(result, "User data updated");
 
     return result;
   }
