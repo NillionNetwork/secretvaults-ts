@@ -9,6 +9,11 @@ import collection from "./data/owned.collection.json";
 import query from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";
 
+import {
+  UpdateUserDataRequest,
+  UpdateUserDataResponse
+} from "#/dto/users.dto";
+
 describe("owned-data.test.ts", () => {
   const { test, beforeAll, afterAll } = createFixture();
 
@@ -279,12 +284,74 @@ describe("owned-data.test.ts", () => {
     expect(result.data.data).toHaveLength(6);
   });
 
+  test("user can update their data", async ({ c }) => {
+    const { builder, user, expect } = c;
+    const userDid = await user.getDid();
+    const builderDid = await builder.getDid();
+    const recordId = faker.string.uuid();
+    const name = faker.person.fullName();
+    const newName = "Dean Huijsen";
+    const delegation = await Builder.delegationFrom(builder.rootToken)
+      .command(NucCmd.nil.db.data.create as Command)
+      .audience(userDid)
+      .expiresAt(intoSecondsFromNow(60))
+      .signAndSerialize(builder.signer);
+
+    const record2 = {
+      _id: recordId,
+      name,
+    };
+
+    const results = await user.createData(
+      {
+        owner: userDid.didString,
+        acl: {
+          grantee: builderDid.didString,
+          read: true,
+          write: false,
+          execute: true,
+        },
+        collection: collection._id,
+        data: [record2],
+      },
+      { auth: { delegation } },
+    );
+    
+    // retrieve original document
+    const createdDocument = await user.readData({
+      collection: collection._id,
+      document: recordId,
+    });
+
+    expect(createdDocument.data.name).toBe(name);
+
+    // Update data
+    await user.updateData({
+      collection: collection._id,
+      document: recordId,
+      update: {
+        "$set": {
+          "name": newName
+        }
+      }
+    });
+
+    // retrieve updated document
+    const updatedDocument = await user.readData({
+      collection: collection._id,
+      document: recordId,
+    });
+
+    expect(updatedDocument.data.name).toBe(newName);
+    
+  });
+
   test("user can delete their data", async ({ c }) => {
     const { user, expect, db } = c;
 
     // Get all user data references
     const allDataRefs = await user.listDataReferences();
-    expect(allDataRefs.data).toHaveLength(6);
+    expect(allDataRefs.data).toHaveLength(7);
 
     // Delete all data records
     for (const ref of allDataRefs.data) {

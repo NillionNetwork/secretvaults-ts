@@ -167,6 +167,20 @@ export const DeleteDocumentResponse = z.string();
 export type DeleteDocumentResponse = z.infer<typeof DeleteDocumentResponse>;
 
 /**
+ * Document update response.
+ */
+export const UpdateUserDataResponse = ApiSuccessResponse(
+  z.object({
+    acknowledged: z.boolean(),
+    matched: z.number().int().min(0),
+    modified: z.number().int().min(0),
+    upserted: z.number().int().min(0),
+    upserted_id: z.string().nullable(),
+  }),
+);
+export type UpdateUserDataResponse = z.infer<typeof UpdateUserDataResponse>;
+
+/**
  * Update user data request.
  */
 export const UpdateUserDataRequest = z.object({
