@@ -9,11 +9,6 @@ import collection from "./data/owned.collection.json";
 import query from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";
 
-import {
-  UpdateUserDataRequest,
-  UpdateUserDataResponse
-} from "#/dto/users.dto";
-
 describe("owned-data.test.ts", () => {
   const { test, beforeAll, afterAll } = createFixture();
 
