@@ -6,13 +6,13 @@ import {
   type NilauthTypes,
   type Did as NucDid,
   type Signer,
+  Validator,
 } from "@nillion/nuc";
 import {
   type AuthContext,
   SecretVaultBaseClient,
   type SecretVaultBaseOptions,
 } from "#/base";
-import { intoSecondsFromNow } from "#/common/utils";
 import type {
   DeleteBuilderResponse,
   ReadBuilderProfileResponse,
@@ -209,8 +209,10 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     // Handle rootToken re-hydration
     if (options.rootToken) {
       if (typeof options.rootToken === "string") {
-        this.#rootToken = Codec.decodeBase64Url(options.rootToken);
-        Log.debug("Root token re-hydrated from string");
+        this.#rootToken = Codec._unsafeDecodeBase64Url(options.rootToken);
+        Log.debug(
+          "Root token re-hydrated using _unsafeDecodeBase64Url(string)",
+        );
       } else {
         this.#rootToken = options.rootToken;
         Log.debug("Root token re-hydrated from Envelope object");
@@ -843,21 +845,40 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     }
 
     const signer = auth?.signer ?? this.signer;
-    const expiresAt = intoSecondsFromNow(60);
+    const defaultExpiresIn = 30_000; // 30 seconds in milli
+    const expiryBuffer = 1_000; // 1 second buffer to avoid race conditions
 
     if (auth?.delegation) {
-      const envelope = Codec.decodeBase64Url(auth.delegation);
+      const envelope = await Validator.parse(auth.delegation, {
+        rootIssuers: [],
+      });
+      // Calculate remaining lifetime from delegation to avoid exceeding parent's expiry
+      const delegationExp = envelope.nuc.payload.exp;
+      const remainingMs = delegationExp
+        ? delegationExp * 1000 - Date.now() - expiryBuffer
+        : defaultExpiresIn;
+      const expiresIn = Math.min(
+        defaultExpiresIn,
+        Math.max(1_000, remainingMs),
+      );
+
       return Builder.invocationFrom(envelope)
         .audience(audience)
         .command(command)
-        .expiresAt(expiresAt)
+        .expiresIn(expiresIn)
         .signAndSerialize(signer);
     }
 
-    // Fallback to root token
+    // Fallback to root token - also cap to remaining lifetime
+    const rootExp = this.rootToken.nuc.payload.exp;
+    const remainingMs = rootExp
+      ? rootExp * 1000 - Date.now() - expiryBuffer
+      : defaultExpiresIn;
+    const expiresIn = Math.min(defaultExpiresIn, Math.max(1_000, remainingMs));
+
     return Builder.invocationFrom(this.rootToken)
       .command(command)
-      .expiresAt(expiresAt)
+      .expiresIn(expiresIn)
       .audience(audience)
       .signAndSerialize(signer);
   }

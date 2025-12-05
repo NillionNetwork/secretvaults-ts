@@ -1,5 +1,6 @@
 import {
   Builder,
+  Codec,
   type Command,
   type Did as NucDid,
   type Signer,
@@ -38,7 +39,6 @@ import {
   processPlaintextResponse,
 } from "./common/cluster";
 import { NucCmd } from "./common/nuc-cmd";
-import { intoSecondsFromNow } from "./common/utils";
 import {
   createNilDbUserClient,
   type NilDbUserClient,
@@ -382,13 +382,25 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     }
 
     const signer = auth?.signer ?? this.signer;
-    const expiresAt = intoSecondsFromNow(60);
+    const defaultExpiresIn = 30_000; // 30 seconds in milli
+    const expiryBuffer = 1_000; // 1 second buffer to avoid race conditions
 
     if (auth?.delegation) {
+      // Calculate remaining lifetime from delegation to avoid exceeding parent's expiry
+      const decoded = Codec._unsafeDecodeBase64Url(auth.delegation);
+      const delegationExp = decoded.nuc.payload.exp;
+      const remainingMs = delegationExp
+        ? delegationExp * 1000 - Date.now() - expiryBuffer
+        : defaultExpiresIn;
+      const expiresIn = Math.min(
+        defaultExpiresIn,
+        Math.max(1_000, remainingMs),
+      );
+
       return Builder.invocationFromString(auth.delegation)
         .audience(audience)
         .command(command as Command)
-        .expiresAt(expiresAt)
+        .expiresIn(expiresIn)
         .signAndSerialize(signer);
     }
 
@@ -397,7 +409,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       .command(command as Command)
       .subject(await this.getDid())
       .audience(audience)
-      .expiresAt(expiresAt)
+      .expiresIn(defaultExpiresIn)
       .signAndSerialize(signer);
   }
 }
