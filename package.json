@@ -1,6 +1,6 @@
 {
   "name": "@nillion/secretvaults",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT",
   "description": "A client for interacting with nillion's nildb blind module",
   "type": "module",
