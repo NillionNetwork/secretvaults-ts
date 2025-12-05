@@ -3,7 +3,7 @@ import { Builder, type Command, NilauthClient, Signer } from "@nillion/nuc";
 import { describe } from "vitest";
 import { SecretVaultBuilderClient } from "#/builder";
 import { NucCmd } from "#/common/nuc-cmd";
-import { intoSecondsFromNow, pause } from "#/common/utils";
+import { pause } from "#/common/utils";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import collection from "./data/owned.collection.json";
 import query from "./data/owned.query.json";
@@ -104,7 +104,7 @@ describe("owned-data.test.ts", () => {
     const delegation = await Builder.delegationFrom(builder.rootToken)
       .command(NucCmd.nil.db.data.create as Command)
       .audience(userDid)
-      .expiresAt(intoSecondsFromNow(60))
+      .expiresIn(30_000)
       .signAndSerialize(builder.signer);
 
     const results = await user.createData(
@@ -155,7 +155,7 @@ describe("owned-data.test.ts", () => {
     const delegation = await Builder.delegationFrom(builder.rootToken)
       .command(NucCmd.nil.db.data.create as Command)
       .audience(userDid)
-      .expiresAt(intoSecondsFromNow(60))
+      .expiresIn(30_000)
       .signAndSerialize(builder.signer);
 
     const moreData = Array.from({ length: 5 }, () => ({

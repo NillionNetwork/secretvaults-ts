@@ -1,8 +1,7 @@
 import { faker } from "@faker-js/faker";
-import { Builder, type Command } from "@nillion/nuc";
+import { Builder, Codec, type Command } from "@nillion/nuc";
 import { describe } from "vitest";
 import { NucCmd } from "#/common/nuc-cmd";
-import { intoSecondsFromNow } from "#/common/utils";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import type { CreateOwnedDataRequest } from "#/dto/data.dto";
 import collection from "./data/owned.collection.json";
@@ -37,6 +36,7 @@ describe("auth-context.test.ts", () => {
       )
         .audience(node.id)
         .command(NucCmd.nil.db.builders.read as Command)
+        .expiresIn(30_000)
         .signAndSerialize(builder.signer);
     }
 
@@ -82,16 +82,26 @@ describe("auth-context.test.ts", () => {
     const delegation = await Builder.delegationFrom(builder.rootToken)
       .command(NucCmd.nil.db.data.create as Command)
       .audience(userDid)
-      .expiresAt(intoSecondsFromNow(60))
+      .expiresIn(60_000)
       .signAndSerialize(builder.signer);
 
     // 2. Pre-mint an invocation for each node from that delegation
+    // Calculate remaining lifetime from delegation to avoid exceeding parent's expiry
+    const decoded = Codec._unsafeDecodeBase64Url(delegation);
+    const delegationExp = decoded.nuc.payload.exp;
+    const expiryBuffer = 1_000; // 1 second buffer to avoid race conditions
+    const remainingMs = delegationExp
+      ? delegationExp * 1000 - Date.now() - expiryBuffer
+      : 30_000;
+    const invocationExpiresIn = Math.min(30_000, Math.max(1_000, remainingMs));
+
     const invocations: Record<string, string> = {};
     for (const node of user.nodes) {
       invocations[node.id.didString] = await Builder.invocationFromString(
         delegation,
       )
         .audience(node.id)
+        .expiresIn(invocationExpiresIn)
         .signAndSerialize(user.signer);
     }
 

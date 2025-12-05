@@ -1,7 +1,3 @@
-export function intoSecondsFromNow(seconds: number): number {
-  return Math.floor((Date.now() + seconds * 1000) / 1000);
-}
-
 export function pause(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
