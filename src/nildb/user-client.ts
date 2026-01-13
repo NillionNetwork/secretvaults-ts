@@ -1,10 +1,6 @@
-import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
 import type { PaginationQuery } from "#/dto/common";
-import {
-  CreateDataResponse,
-  type CreateOwnedDataRequest,
-} from "#/dto/data.dto";
+import { CreateDataResponse, type CreateOwnedDataRequest } from "#/dto/data.dto";
 import type { ReadAboutNodeResponse } from "#/dto/system.dto";
 import {
   type DeleteDocumentRequestParams,
@@ -18,6 +14,8 @@ import {
   type RevokeAccessToDataRequest,
   RevokeAccessToDataResponse,
 } from "#/dto/users.dto";
+import { z } from "zod";
+
 import { NilDbBaseClient, NilDbBaseClientOptions } from "./base-client";
 
 export const NilDbUserClientOptions = z.object({
@@ -41,10 +39,7 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Lists all data records owned by the authenticated user.
    */
-  listDataReferences(
-    token: string,
-    pagination?: PaginationQuery,
-  ): Promise<ListDataReferencesResponse> {
+  listDataReferences(token: string, pagination?: PaginationQuery): Promise<ListDataReferencesResponse> {
     let path: string = NilDbEndpoint.v1.users.data.root;
     if (pagination) {
       const params = new URLSearchParams();
@@ -66,10 +61,7 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Create user-owned data in an owned collection
    */
-  createOwnedData(
-    token: string,
-    body: CreateOwnedDataRequest,
-  ): Promise<CreateDataResponse> {
+  createOwnedData(token: string, body: CreateOwnedDataRequest): Promise<CreateDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.data.createOwned,
       method: "POST",
@@ -82,10 +74,7 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Retrieves user-owned data by collection and document id.
    */
-  readData(
-    token: string,
-    params: ReadDataRequestParams,
-  ): Promise<ReadDataResponse> {
+  readData(token: string, params: ReadDataRequestParams): Promise<ReadDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.byId
         .replace(":collection", params.collection)
@@ -98,10 +87,7 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Deletes a user-owned data document.
    */
-  deleteData(
-    token: string,
-    params: DeleteDocumentRequestParams,
-  ): Promise<DeleteDocumentResponse> {
+  deleteData(token: string, params: DeleteDocumentRequestParams): Promise<DeleteDocumentResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.byId
         .replace(":collection", params.collection)
@@ -115,10 +101,7 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Grants access to user-owned data.
    */
-  grantAccess(
-    token: string,
-    body: GrantAccessToDataRequest,
-  ): Promise<GrantAccessToDataResponse> {
+  grantAccess(token: string, body: GrantAccessToDataRequest): Promise<GrantAccessToDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.acl.grant,
       method: "POST",
@@ -131,10 +114,7 @@ export class NilDbUserClient extends NilDbBaseClient {
   /**
    * Removes access to user-owned data.
    */
-  revokeAccess(
-    token: string,
-    body: RevokeAccessToDataRequest,
-  ): Promise<RevokeAccessToDataResponse> {
+  revokeAccess(token: string, body: RevokeAccessToDataRequest): Promise<RevokeAccessToDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.users.data.acl.revoke,
       method: "POST",
@@ -145,9 +125,7 @@ export class NilDbUserClient extends NilDbBaseClient {
   }
 }
 
-export async function createNilDbUserClient(
-  baseUrl: string,
-): Promise<NilDbUserClient> {
+export async function createNilDbUserClient(baseUrl: string): Promise<NilDbUserClient> {
   const response = await fetch(`${baseUrl}/about`);
   const about = (await response.json()) as ReadAboutNodeResponse;
 

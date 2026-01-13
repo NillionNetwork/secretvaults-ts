@@ -78,8 +78,7 @@ function isValidLogLevel(value: unknown): value is LogLevel {
  * @internal
  */
 function getInitialLogLevel(): LogLevel {
-  const fromEnv =
-    typeof process !== "undefined" ? process.env[LOG_LEVEL_KEY] : undefined;
+  const fromEnv = typeof process !== "undefined" ? process.env[LOG_LEVEL_KEY] : undefined;
   if (isValidLogLevel(fromEnv)) {
     return fromEnv;
   }
@@ -107,7 +106,7 @@ export const Log: pino.Logger = pino({
  */
 export function setLogLevel(level: LogLevel): void {
   if (!isValidLogLevel(level)) {
-    console.warn(`[Logger] Invalid log level: "${level}". Ignoring.`);
+    console.warn(`[Logger] Invalid log level: "${String(level)}". Ignoring.`);
     return;
   }
   Log.level = level;
@@ -173,7 +172,7 @@ if (typeof globalThis !== "undefined") {
     const instances = new Set<LoggerApi>();
     globalThis.__NILLION = {
       _instances: instances,
-      setLogLevel: (level: LogLevel) => {
+      setLogLevel: (level: LogLevel): void => {
         // Broadcast the command to all registered logger instances.
         for (const instance of instances) {
           instance.set(level);
@@ -184,7 +183,7 @@ if (typeof globalThis !== "undefined") {
         const first = instances.values().next().value;
         return first ? first.get() : getInitialLogLevel();
       },
-      clearStoredLogLevel: () => {
+      clearStoredLogLevel: (): void => {
         // This is a global action, so only one instance needs to perform it.
         const first = instances.values().next().value;
         if (first) {

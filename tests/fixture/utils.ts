@@ -1,7 +1,8 @@
-import pino, { type Logger } from "pino";
-import { vi } from "vitest";
 import type { ByNodeName, Uuid } from "#/dto/common";
 import type { ReadQueryRunByIdResponse } from "#/dto/queries.dto";
+import pino, { type Logger } from "pino";
+import { vi } from "vitest";
+
 import type { FixtureContext } from "./fixture";
 
 export function createTestLogger(): Logger {
@@ -19,10 +20,7 @@ export function waitForQueryRun(
       const result = await builder.readQueryRunResults(runs);
 
       const nodes = Object.values(result);
-      const completedNodes = nodes.filter(
-        (node) =>
-          node.data.status === "complete" || node.data.status === "error",
-      );
+      const completedNodes = nodes.filter((node) => node.data.status === "complete" || node.data.status === "error");
 
       expect(completedNodes.length).toBe(2);
       return result;

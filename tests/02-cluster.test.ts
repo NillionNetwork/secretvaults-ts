@@ -1,5 +1,3 @@
-import { ClusterKey, SecretKey } from "@nillion/blindfold";
-import { beforeEach, describe, expect, it } from "vitest";
 import { conceal } from "#/common/blindfold";
 import {
   executeOnCluster,
@@ -9,6 +7,9 @@ import {
   processPlaintextResponse,
 } from "#/common/cluster";
 import type { NilDbBaseClient } from "#/nildb/base-client";
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { ClusterKey, SecretKey } from "@nillion/blindfold";
 
 function createNilDbBaseClients(count: number): NilDbBaseClient[] {
   // @ts-expect-error a primitive mock since we don't need anything fancy
@@ -21,7 +22,7 @@ describe("executeOnCluster", () => {
   it("executes operation on all clients in parallel", async () => {
     const clients = createNilDbBaseClients(3);
 
-    const operation = async (client: NilDbBaseClient, index: number) => {
+    const operation = async (client: NilDbBaseClient, index: number): Promise<string> => {
       return `result-${client.id.didString}-${index}`;
     };
 
@@ -36,7 +37,7 @@ describe("executeOnCluster", () => {
 
   it("propagates errors from failed operations", async () => {
     const clients = createNilDbBaseClients(2);
-    const operation = async (client: NilDbBaseClient) => {
+    const operation = async (client: NilDbBaseClient): Promise<string> => {
       if (client.id.didString.includes("node-2")) {
         throw new Error("Node 2 failed");
       }
@@ -111,9 +112,7 @@ describe("processPlaintextResponse", () => {
   it("throws error when no responses available", () => {
     const results = {};
 
-    expect(() => processPlaintextResponse(results)).toThrow(
-      "Failed to select a canonical response",
-    );
+    expect(() => processPlaintextResponse(results)).toThrow("Failed to select a canonical response");
   });
 });
 
@@ -303,9 +302,7 @@ describe("processConcealedListResponse with ClusterKey", () => {
 
   it("reveals documents with ClusterKey", async () => {
     const doc = { _id: "cluster-doc", patientId: { "%allot": "P12345" } };
-    const shares = await import("#/common/blindfold").then(({ conceal }) =>
-      conceal(key, doc),
-    );
+    const shares = await import("#/common/blindfold").then(({ conceal }) => conceal(key, doc));
 
     const resultsByNode = {
       "node-1": { data: [shares[0]] },
@@ -402,9 +399,7 @@ describe("processConcealedObjectResponse with ClusterKey", () => {
 
   it("reveals object with ClusterKey", async () => {
     const doc = { _id: "cluster-obj", diagnosis: { "%allot": "Confidential" } };
-    const shares = await import("#/common/blindfold").then(({ conceal }) =>
-      conceal(key, doc),
-    );
+    const shares = await import("#/common/blindfold").then(({ conceal }) => conceal(key, doc));
 
     const resultsByNode = {
       "node-1": { data: shares[0] },

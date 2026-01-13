@@ -1,10 +1,6 @@
 import { z } from "zod";
-import {
-  ApiSuccessResponse,
-  DidString,
-  PaginatedResponse,
-  PaginationBodySchema,
-} from "./common";
+
+import { ApiSuccessResponse, DidString, PaginatedResponse, PaginationBodySchema } from "./common";
 import { AclDto } from "./users.dto";
 
 /**
@@ -25,9 +21,7 @@ export const CreateStandardDataRequest = z.object({
   collection: z.uuid(),
   data: z.array(z.record(z.string(), z.unknown())).min(1),
 });
-export type CreateStandardDataRequest = z.infer<
-  typeof CreateStandardDataRequest
->;
+export type CreateStandardDataRequest = z.infer<typeof CreateStandardDataRequest>;
 
 /**
  * Data creation response.
@@ -82,9 +76,7 @@ export type FindDataRequest = z.infer<typeof FindDataRequest>;
 /**
  * Data find response.
  */
-export const FindDataResponse = PaginatedResponse(
-  z.record(z.string(), z.unknown()),
-);
+export const FindDataResponse = PaginatedResponse(z.record(z.string(), z.unknown()));
 export type FindDataResponse = z.infer<typeof FindDataResponse>;
 
 /**
@@ -92,9 +84,7 @@ export type FindDataResponse = z.infer<typeof FindDataResponse>;
  */
 export const DeleteDataRequest = z.object({
   collection: z.uuid(),
-  filter: z
-    .record(z.string(), z.unknown())
-    .refine((obj) => Object.keys(obj).length > 0, "Filter cannot be empty"),
+  filter: z.record(z.string(), z.unknown()).refine((obj) => Object.keys(obj).length > 0, "Filter cannot be empty"),
 });
 export type DeleteDataRequest = z.infer<typeof DeleteDataRequest>;
 
@@ -140,9 +130,7 @@ export type DropDataResponse = z.infer<typeof DropDataResponse>;
 export const DataSchemaByIdRequestParams = z.object({
   id: z.uuid(),
 });
-export type DataSchemaByIdRequestParams = z.infer<
-  typeof DataSchemaByIdRequestParams
->;
+export type DataSchemaByIdRequestParams = z.infer<typeof DataSchemaByIdRequestParams>;
 
 /**
  * Data tail request parameters.
@@ -163,7 +151,5 @@ export type TailDataRequestQuery = z.infer<typeof TailDataRequestQuery>;
 /**
  * Data tail response.
  */
-export const TailDataResponse = ApiSuccessResponse(
-  z.array(z.record(z.string(), z.unknown())),
-);
+export const TailDataResponse = ApiSuccessResponse(z.array(z.record(z.string(), z.unknown())));
 export type TailDataResponse = z.infer<typeof TailDataResponse>;

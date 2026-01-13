@@ -1,9 +1,11 @@
-import { NilauthClient, PayerBuilder, Signer } from "@nillion/nuc";
+import { SecretVaultBuilderClient } from "#/builder";
+import { SecretVaultUserClient } from "#/user";
 import { MongoClient } from "mongodb";
 import type { Logger } from "pino";
 import * as vitest from "vitest";
-import { SecretVaultBuilderClient } from "#/builder";
-import { SecretVaultUserClient } from "#/user";
+
+import { NilauthClient, PayerBuilder, Signer } from "@nillion/nuc";
+
 import { createTestLogger } from "./utils";
 
 /**
@@ -67,7 +69,7 @@ export function createFixture(
     },
   });
 
-  const beforeAll = (fn: (c: FixtureContext) => Promise<void>) =>
+  const beforeAll = (fn: (c: FixtureContext) => Promise<void>): void =>
     vitest.beforeAll(async () => {
       try {
         fixture = await buildContext(options);
@@ -75,10 +77,8 @@ export function createFixture(
       } catch (cause) {
         // Fallback to `process.stderr` to ensure fixture setup failures are logged during suite setup/teardown
         process.stderr.write("***\n");
-        process.stderr.write(
-          "Critical: Fixture setup failed, stopping test run\n",
-        );
-        process.stderr.write(`${cause}\n`);
+        process.stderr.write("Critical: Fixture setup failed, stopping test run\n");
+        process.stderr.write(`${String(cause)}\n`);
         process.stderr.write("***\n");
         throw new Error("Critical: Fixture setup failed, stopping test run", {
           cause,
@@ -86,13 +86,11 @@ export function createFixture(
       }
     });
 
-  const afterAll = (fn: (c: FixtureContext) => Promise<void>) =>
+  const afterAll = (fn: (c: FixtureContext) => Promise<void>): void =>
     vitest.afterAll(async () => {
       if (!fixture) {
         // Fallback to `process.stderr` to ensure fixture setup failures are logged during suite setup/teardown
-        process.stderr.write(
-          "Fixture not initialized, skipping 'afterAll' hook\n",
-        );
+        process.stderr.write("Fixture not initialized, skipping 'afterAll' hook\n");
         return;
       }
 
@@ -105,20 +103,11 @@ export function createFixture(
         fixture.log.info("Tidying databases");
 
         const instanceDbPrefix = ["nildb-1", "nildb-2"];
-        const collections = [
-          "builders",
-          "collections",
-          "queries",
-          "query_runs",
-          "users",
-        ];
+        const collections = ["builders", "collections", "queries", "query_runs", "users"];
 
         for (const instanceDbName of instanceDbPrefix) {
           const promises = collections.map(async (collection) => {
-            await dbClient
-              .db(instanceDbName)
-              .collection(collection)
-              .deleteMany({});
+            await dbClient.db(instanceDbName).collection(collection).deleteMany({});
           });
           await Promise.all(promises);
 
@@ -136,9 +125,7 @@ export function createFixture(
 /**
  *
  */
-async function buildContext(
-  options: CreateFixtureOptions,
-): Promise<FixtureContext> {
+async function buildContext(options: CreateFixtureOptions): Promise<FixtureContext> {
   const nildbNodesUrls = process.env.APP_NILDB_NODES.split(",");
   const secretKey = process.env.APP_NILCHAIN_PRIVATE_KEY_0;
   const nilchainUrl = process.env.APP_NILCHAIN_JSON_RPC;
@@ -154,9 +141,7 @@ async function buildContext(
     signer: Signer.generate(),
   });
 
-  const payer = await PayerBuilder.fromPrivateKey(secretKey)
-    .chainUrl(nilchainUrl)
-    .build();
+  const payer = await PayerBuilder.fromPrivateKey(secretKey).chainUrl(nilchainUrl).build();
 
   const nilauth = await NilauthClient.create({
     baseUrl: nilauthUrl,
@@ -173,11 +158,7 @@ async function buildContext(
   if (options.activateBuilderSubscription) {
     const builderDid = await builder.getDid();
     log.info({ did: builderDid.didString }, "Renewing subscription");
-    await nilauth.payAndValidate(
-      Signer.fromPrivateKey(secretKey),
-      builderDid,
-      "nildb",
-    );
+    await nilauth.payAndValidate(Signer.fromPrivateKey(secretKey), builderDid, "nildb");
     await builder.refreshRootToken();
   }
 

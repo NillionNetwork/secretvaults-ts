@@ -1,9 +1,11 @@
-import { faker } from "@faker-js/faker";
-import { Builder, Codec, type Command } from "@nillion/nuc";
-import { describe } from "vitest";
 import { NucCmd } from "#/common/nuc-cmd";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import type { CreateOwnedDataRequest } from "#/dto/data.dto";
+import { faker } from "@faker-js/faker";
+import { describe } from "vitest";
+
+import { Builder, Codec, type Command } from "@nillion/nuc";
+
 import collection from "./data/owned.collection.json";
 import { createFixture } from "./fixture/fixture";
 
@@ -31,9 +33,7 @@ describe("auth-context.test.ts", () => {
     // 1. Pre-mint invocations for each node in the cluster
     const invocations: Record<string, string> = {};
     for (const node of builder.nodes) {
-      invocations[node.id.didString] = await Builder.invocationFrom(
-        builder.rootToken,
-      )
+      invocations[node.id.didString] = await Builder.invocationFrom(builder.rootToken)
         .audience(node.id)
         .command(NucCmd.nil.db.builders.read as Command)
         .expiresIn(30_000)
@@ -45,9 +45,7 @@ describe("auth-context.test.ts", () => {
     expect(profile.data._id).toBe((await builder.getDid()).didString);
   });
 
-  test("user.createData throws error if auth context is missing", async ({
-    c,
-  }) => {
+  test("user.createData throws error if auth context is missing", async ({ c }) => {
     const { user, expect } = c;
     const userDid = await user.getDid();
 
@@ -90,16 +88,12 @@ describe("auth-context.test.ts", () => {
     const decoded = Codec._unsafeDecodeBase64Url(delegation);
     const delegationExp = decoded.nuc.payload.exp;
     const expiryBuffer = 1_000; // 1 second buffer to avoid race conditions
-    const remainingMs = delegationExp
-      ? delegationExp * 1000 - Date.now() - expiryBuffer
-      : 30_000;
+    const remainingMs = delegationExp ? delegationExp * 1000 - Date.now() - expiryBuffer : 30_000;
     const invocationExpiresIn = Math.min(30_000, Math.max(1_000, remainingMs));
 
     const invocations: Record<string, string> = {};
     for (const node of user.nodes) {
-      invocations[node.id.didString] = await Builder.invocationFromString(
-        delegation,
-      )
+      invocations[node.id.didString] = await Builder.invocationFromString(delegation)
         .audience(node.id)
         .expiresIn(invocationExpiresIn)
         .signAndSerialize(user.signer);

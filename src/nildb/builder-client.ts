@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
 import {
   DeleteBuilderResponse,
@@ -43,13 +42,12 @@ import {
 } from "#/dto/queries.dto";
 import type { ReadAboutNodeResponse } from "#/dto/system.dto";
 import { NilDbBaseClient, NilDbBaseClientOptions } from "#/nildb/base-client";
+import { z } from "zod";
 
 export const NilDbBuilderClientOptions = z.object({
   ...NilDbBaseClientOptions.shape,
 });
-export type NilDbBuilderClientOptions = z.infer<
-  typeof NilDbBuilderClientOptions
->;
+export type NilDbBuilderClientOptions = z.infer<typeof NilDbBuilderClientOptions>;
 
 /**
  *
@@ -81,10 +79,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Updates the authenticated builder's profile information.
    */
-  updateProfile(
-    token: string,
-    body: UpdateBuilderProfileRequest,
-  ): Promise<UpdateBuilderProfileResponse> {
+  updateProfile(token: string, body: UpdateBuilderProfileRequest): Promise<UpdateBuilderProfileResponse> {
     return this.request({
       path: NilDbEndpoint.v1.builders.me,
       method: "POST",
@@ -109,10 +104,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Creates a new collection for data validation.
    */
-  createCollection(
-    token: string,
-    body: CreateCollectionRequest,
-  ): Promise<CreateCollectionResponse> {
+  createCollection(token: string, body: CreateCollectionRequest): Promise<CreateCollectionResponse> {
     return this.request({
       path: NilDbEndpoint.v1.collections.root,
       method: "POST",
@@ -125,10 +117,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Lists all collections owned by the authenticated builder.
    */
-  readCollections(
-    token: string,
-    pagination?: PaginationQuery,
-  ): Promise<ListCollectionsResponse> {
+  readCollections(token: string, pagination?: PaginationQuery): Promise<ListCollectionsResponse> {
     let path: string = NilDbEndpoint.v1.collections.root;
     if (pagination) {
       const params = new URLSearchParams();
@@ -156,10 +145,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Deletes a collection by id and all associated data.
    */
-  deleteCollection(
-    token: string,
-    collection: Uuid,
-  ): Promise<DeleteCollectionResponse> {
+  deleteCollection(token: string, collection: Uuid): Promise<DeleteCollectionResponse> {
     return this.request({
       path: NilDbEndpoint.v1.collections.byId.replace(":id", collection),
       method: "DELETE",
@@ -171,10 +157,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Retrieves a collection by id including metadata.
    */
-  readCollection(
-    token: string,
-    collection: Uuid,
-  ): Promise<ReadCollectionMetadataResponse> {
+  readCollection(token: string, collection: Uuid): Promise<ReadCollectionMetadataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.collections.byId.replace(":id", collection),
       method: "GET",
@@ -203,15 +186,9 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Drops an index from a collection.
    */
-  dropCollectionIndex(
-    token: string,
-    collection: Uuid,
-    index: Name,
-  ): Promise<DropCollectionIndexResponse> {
+  dropCollectionIndex(token: string, collection: Uuid, index: Name): Promise<DropCollectionIndexResponse> {
     return this.request({
-      path: NilDbEndpoint.v1.collections.indexesByNameById
-        .replace(":id", collection)
-        .replace(":name", index),
+      path: NilDbEndpoint.v1.collections.indexesByNameById.replace(":id", collection).replace(":name", index),
       method: "DELETE",
       token,
       responseSchema: DropCollectionIndexResponse,
@@ -221,10 +198,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Lists all queries owned by the authenticated builder.
    */
-  getQueries(
-    token: string,
-    pagination?: PaginationQuery,
-  ): Promise<ReadQueriesResponse> {
+  getQueries(token: string, pagination?: PaginationQuery): Promise<ReadQueriesResponse> {
     let path: string = NilDbEndpoint.v1.queries.root;
     if (pagination) {
       const params = new URLSearchParams();
@@ -262,10 +236,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Creates a new MongoDB aggregation query with variable substitution.
    */
-  createQuery(
-    token: string,
-    body: CreateQueryRequest,
-  ): Promise<CreateQueryResponse> {
+  createQuery(token: string, body: CreateQueryRequest): Promise<CreateQueryResponse> {
     return this.request({
       path: NilDbEndpoint.v1.queries.root,
       method: "POST",
@@ -303,10 +274,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Retrieves the status and results of a background query job.
    */
-  readQueryRunResults(
-    token: string,
-    run: Uuid,
-  ): Promise<ReadQueryRunByIdResponse> {
+  readQueryRunResults(token: string, run: Uuid): Promise<ReadQueryRunByIdResponse> {
     return this.request({
       path: NilDbEndpoint.v1.queries.runById.replace(":id", run),
       token,
@@ -317,10 +285,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Uploads standard data records to a schema-validated collection.
    */
-  createStandardData(
-    token: string,
-    body: CreateStandardDataRequest,
-  ): Promise<CreateDataResponse> {
+  createStandardData(token: string, body: CreateStandardDataRequest): Promise<CreateDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.data.createStandard,
       method: "POST",
@@ -346,10 +311,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Updates data records matching the provided filter.
    */
-  updateData(
-    token: string,
-    body: UpdateDataRequest,
-  ): Promise<UpdateDataResponse> {
+  updateData(token: string, body: UpdateDataRequest): Promise<UpdateDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.data.update,
       method: "POST",
@@ -362,10 +324,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Deletes data records matching the provided filter.
    */
-  deleteData(
-    token: string,
-    body: DeleteDataRequest,
-  ): Promise<DeleteDataResponse> {
+  deleteData(token: string, body: DeleteDataRequest): Promise<DeleteDataResponse> {
     return this.request({
       path: NilDbEndpoint.v1.data.delete,
       method: "POST",
@@ -390,11 +349,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Retrieves the most recent data records from a collection.
    */
-  tailData(
-    token: string,
-    collection: Uuid,
-    limit = 10,
-  ): Promise<TailDataResponse> {
+  tailData(token: string, collection: Uuid, limit = 10): Promise<TailDataResponse> {
     return this.request({
       path: `${NilDbEndpoint.v1.data.tailById.replace(":id", collection)}?limit=${limit}`,
       method: "GET",
@@ -404,9 +359,7 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   }
 }
 
-export async function createNilDbBuilderClient(
-  baseUrl: string,
-): Promise<NilDbBuilderClient> {
+export async function createNilDbBuilderClient(baseUrl: string): Promise<NilDbBuilderClient> {
   const response = await fetch(`${baseUrl}/about`);
   const body = (await response.json()) as ReadAboutNodeResponse;
 

@@ -51,10 +51,10 @@ By default, the clients handle NUC invocation minting automatically. For advance
 
 The `AuthContext` allows you to provide one of the following mutually exclusive properties:
 
-| Property      | Type                     | Use Case                                                                                             |
-| :------------ | :----------------------- | :--------------------------------------------------------------------------------------------------- |
-| `invocations` | `Record<string, string>` | **Cluster-wide operations without re-signing.** A map of node DIDs to pre-signed invocations.        |
-| `delegation`  | `string`                 | **Chained capabilities.** A delegation from which a new invocation will be derived and signed.       |
+| Property      | Type                     | Use Case                                                                                              |
+| :------------ | :----------------------- | :---------------------------------------------------------------------------------------------------- |
+| `invocations` | `Record<string, string>` | **Cluster-wide operations without re-signing.** A map of node DIDs to pre-signed invocations.         |
+| `delegation`  | `string`                 | **Chained capabilities.** A delegation from which a new invocation will be derived and signed.        |
 | `signer`      | `Signer`                 | **Temporary identity.** A one-time `Signer` to use for this request, overriding the client's default. |
 
 **Example:** Using a map of pre-signed invocations to read a builder's profile without triggering new signatures.

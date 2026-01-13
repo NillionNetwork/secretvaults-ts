@@ -1,10 +1,6 @@
 import { z } from "zod";
-import {
-  ApiSuccessResponse,
-  DidString,
-  PaginatedResponse,
-  PaginationQuerySchema,
-} from "./common";
+
+import { ApiSuccessResponse, DidString, PaginatedResponse, PaginationQuerySchema } from "./common";
 
 /**
  * Access control list entry.
@@ -81,20 +77,14 @@ const DataDocumentReference = z.object({
  * User data references list request query parameters.
  */
 export const ListDataReferencesRequestQuery = PaginationQuerySchema;
-export type ListDataReferencesRequestQuery = z.infer<
-  typeof ListDataReferencesRequestQuery
->;
+export type ListDataReferencesRequestQuery = z.infer<typeof ListDataReferencesRequestQuery>;
 
 /**
  * User data references response.
  */
-export const ListDataReferencesResponse = PaginatedResponse(
-  DataDocumentReference,
-);
+export const ListDataReferencesResponse = PaginatedResponse(DataDocumentReference);
 
-export type ListDataReferencesResponse = z.infer<
-  typeof ListDataReferencesResponse
->;
+export type ListDataReferencesResponse = z.infer<typeof ListDataReferencesResponse>;
 
 /**
  * Data ACL read parameters.
@@ -125,9 +115,7 @@ export type GrantAccessToDataRequest = z.infer<typeof GrantAccessToDataRequest>;
  * Grant data access response.
  */
 export const GrantAccessToDataResponse = z.string();
-export type GrantAccessToDataResponse = z.infer<
-  typeof GrantAccessToDataResponse
->;
+export type GrantAccessToDataResponse = z.infer<typeof GrantAccessToDataResponse>;
 
 /**
  * Revoke data access request.
@@ -137,17 +125,13 @@ export const RevokeAccessToDataRequest = z.object({
   collection: z.uuid(),
   document: z.uuid(),
 });
-export type RevokeAccessToDataRequest = z.infer<
-  typeof RevokeAccessToDataRequest
->;
+export type RevokeAccessToDataRequest = z.infer<typeof RevokeAccessToDataRequest>;
 
 /**
  * Revoke data access response.
  */
 export const RevokeAccessToDataResponse = z.string();
-export type RevokeAccessToDataResponse = z.infer<
-  typeof RevokeAccessToDataResponse
->;
+export type RevokeAccessToDataResponse = z.infer<typeof RevokeAccessToDataResponse>;
 
 /**
  * Document deletion parameters.
@@ -156,9 +140,7 @@ export const DeleteDocumentRequestParams = z.object({
   collection: z.uuid(),
   document: z.uuid(),
 });
-export type DeleteDocumentRequestParams = z.infer<
-  typeof DeleteDocumentRequestParams
->;
+export type DeleteDocumentRequestParams = z.infer<typeof DeleteDocumentRequestParams>;
 
 /**
  * Document deletion response.

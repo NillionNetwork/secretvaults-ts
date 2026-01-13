@@ -1,25 +1,31 @@
 {
   "name": "@nillion/secretvaults",
   "version": "1.1.0",
-  "license": "MIT",
   "description": "A client for interacting with nillion's nildb blind module",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "type": "module",
-  "scripts": {
-    "fix": "biome check --fix --unsafe && tsc --noEmit",
-    "fmt": "biome format --fix",
-    "install-hooks": "lefthook install",
-    "test": "vitest run",
-    "build": "tsup",
-    "attw": "attw --profile esm-only --pack .",
-    "docs": "typedoc",
-    "docs:serve": "pnpm docs && npx serve docs"
-  },
   "exports": {
     ".": {
       "types": "./dist/lib.d.ts",
       "import": "./dist/lib.js"
     },
     "./package.json": "./package.json"
+  },
+  "scripts": {
+    "check": "pnpm exec oxfmt --check && pnpm exec oxlint --type-aware && pnpm exec tsgo -b",
+    "fix": "pnpm exec oxfmt && pnpm exec oxlint --fix --type-aware && pnpm exec tsgo -b",
+    "fmt": "pnpm exec oxfmt",
+    "install-hooks": "lefthook install",
+    "test": "vitest run",
+    "build": "tsup",
+    "attw": "attw --profile esm-only --pack .",
+    "docs": "typedoc",
+    "docs:serve": "pnpm docs && npx serve docs"
   },
   "dependencies": {
     "@nillion/blindfold": "0.1.0",
@@ -31,7 +37,6 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
-    "@biomejs/biome": "2.1.3",
     "@commitlint/cli": "^20.2.0",
     "@commitlint/config-conventional": "^20.2.0",
     "@commitlint/types": "^20.2.0",
@@ -39,11 +44,15 @@
     "@types/debug": "^4.1.12",
     "@types/node": "^24.10.1",
     "@types/semver": "^7.7.1",
+    "@typescript/native-preview": "7.0.0-dev.20260113.1",
     "@vitest/coverage-v8": "4.0.4",
     "docker-compose": "^1.3.0",
     "dotenv": "^17.2.3",
     "lefthook": "^2.0.8",
     "mongodb": "^6.21.0",
+    "oxfmt": "^0.23.0",
+    "oxlint": "^1.38.0",
+    "oxlint-tsgolint": "^0.10.1",
     "semver": "^7.7.3",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
@@ -53,10 +62,8 @@
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^4.0.15"
   },
-  "packageManager": "pnpm@10.24.0",
-  "files": [
-    "dist",
-    "LICENSE",
-    "README.md"
-  ]
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@10.24.0"
 }

@@ -1,20 +1,6 @@
-import {
-  Builder,
-  Codec,
-  type Command,
-  type Did as NucDid,
-  type Signer,
-} from "@nillion/nuc";
-import {
-  type AuthContext,
-  SecretVaultBaseClient,
-  type SecretVaultBaseOptions,
-} from "#/base";
+import { type AuthContext, SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
 import type { ByNodeName, PaginationQuery } from "#/dto/common";
-import type {
-  CreateDataResponse,
-  CreateOwnedDataRequest,
-} from "#/dto/data.dto";
+import type { CreateDataResponse, CreateOwnedDataRequest } from "#/dto/data.dto";
 import type {
   DeleteDocumentRequestParams,
   DeleteDocumentResponse,
@@ -28,10 +14,10 @@ import type {
   RevokeAccessToDataResponse,
 } from "#/dto/users.dto";
 import { Log } from "#/logger";
-import {
-  type BlindfoldFactoryConfig,
-  toBlindfoldKey,
-} from "./common/blindfold";
+
+import { Builder, Codec, type Command, type Did as NucDid, type Signer } from "@nillion/nuc";
+
+import { type BlindfoldFactoryConfig, toBlindfoldKey } from "./common/blindfold";
 import {
   executeOnCluster,
   prepareRequest,
@@ -39,10 +25,7 @@ import {
   processPlaintextResponse,
 } from "./common/cluster";
 import { NucCmd } from "./common/nuc-cmd";
-import {
-  createNilDbUserClient,
-  type NilDbUserClient,
-} from "./nildb/user-client";
+import { createNilDbUserClient, type NilDbUserClient } from "./nildb/user-client";
 
 export type SecretVaultUserOptions = SecretVaultBaseOptions<NilDbUserClient>;
 
@@ -146,9 +129,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Reads the user's profile information from the cluster.
    */
-  async readProfile(options?: {
-    auth?: AuthContext;
-  }): Promise<ReadUserProfileResponse> {
+  async readProfile(options?: { auth?: AuthContext }): Promise<ReadUserProfileResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -226,10 +207,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
 
     const result = processPlaintextResponse(resultsByNode);
 
-    Log.info(
-      { user: await this.getId(), count: result.data?.length || 0 },
-      "User data references listed",
-    );
+    Log.info({ user: await this.getId(), count: result.data?.length || 0 }, "User data references listed");
 
     return result;
   }
@@ -237,10 +215,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
   /**
    * Reads a single data document, automatically revealing concealed values if a key is configured.
    */
-  async readData(
-    params: ReadDataRequestParams,
-    options?: { auth?: AuthContext },
-  ): Promise<ReadDataResponse> {
+  async readData(params: ReadDataRequestParams, options?: { auth?: AuthContext }): Promise<ReadDataResponse> {
     // 1. Fetch the raw data from all nodes.
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
@@ -364,11 +339,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
     return result;
   }
 
-  private async getInvocationFor(options: {
-    auth?: AuthContext;
-    command: string;
-    audience: NucDid;
-  }): Promise<string> {
+  private async getInvocationFor(options: { auth?: AuthContext; command: string; audience: NucDid }): Promise<string> {
     const { auth, command, audience } = options;
 
     if (auth?.invocations) {
@@ -376,9 +347,7 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       if (invocation) {
         return Promise.resolve(invocation);
       }
-      throw new Error(
-        `Invocation for node ${audience.didString} not found in provided 'invocations' map.`,
-      );
+      throw new Error(`Invocation for node ${audience.didString} not found in provided 'invocations' map.`);
     }
 
     const signer = auth?.signer ?? this.signer;
@@ -389,13 +358,8 @@ export class SecretVaultUserClient extends SecretVaultBaseClient<NilDbUserClient
       // Calculate remaining lifetime from delegation to avoid exceeding parent's expiry
       const decoded = Codec._unsafeDecodeBase64Url(auth.delegation);
       const delegationExp = decoded.nuc.payload.exp;
-      const remainingMs = delegationExp
-        ? delegationExp * 1000 - Date.now() - expiryBuffer
-        : defaultExpiresIn;
-      const expiresIn = Math.min(
-        defaultExpiresIn,
-        Math.max(1_000, remainingMs),
-      );
+      const remainingMs = delegationExp ? delegationExp * 1000 - Date.now() - expiryBuffer : defaultExpiresIn;
+      const expiresIn = Math.min(defaultExpiresIn, Math.max(1_000, remainingMs));
 
       return Builder.invocationFromString(auth.delegation)
         .audience(audience)

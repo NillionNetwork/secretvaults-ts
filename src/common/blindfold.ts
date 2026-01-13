@@ -1,11 +1,6 @@
-import {
-  allot,
-  ClusterKey,
-  encrypt,
-  SecretKey,
-  unify,
-} from "@nillion/blindfold";
 import { Log } from "#/logger";
+
+import { allot, ClusterKey, encrypt, SecretKey, unify } from "@nillion/blindfold";
 
 export type BlindfoldOperation = "store" | "match" | "sum";
 
@@ -81,7 +76,7 @@ export async function toBlindfoldKey(
   };
 
   const threshold = "threshold" in options ? options.threshold : undefined;
-  const cluster = { nodes: new Array(clusterSize).fill({}) };
+  const cluster = { nodes: Array.from({ length: clusterSize }, () => ({})) };
 
   const useClusterKey = "useClusterKey" in options && options.useClusterKey;
   const useSeed = "seed" in options && options.seed !== undefined;
@@ -90,12 +85,7 @@ export async function toBlindfoldKey(
   const type = isClusterKey ? "ClusterKey" : "SecretKey";
   const key = isClusterKey
     ? await ClusterKey.generate(cluster, op, threshold)
-    : await SecretKey.generate(
-        cluster,
-        op,
-        threshold,
-        "seed" in options ? options.seed : undefined,
-      );
+    : await SecretKey.generate(cluster, op, threshold, "seed" in options ? options.seed : undefined);
 
   Log.debug(
     {
@@ -196,10 +186,7 @@ export async function conceal(
   // splits data into one record per-node where each node gets a secret share
   const shares = allot(encryptedData) as Record<string, unknown>[];
 
-  Log.debug(
-    { type: key.constructor.name, shares: shares.length },
-    "Data concealed",
-  );
+  Log.debug({ type: key.constructor.name, shares: shares.length }, "Data concealed");
 
   return shares;
 }

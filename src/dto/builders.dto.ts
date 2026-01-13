@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { ApiSuccessResponse, DidString, Name } from "./common";
 
 /**
@@ -32,9 +33,7 @@ const BuilderProfileDto = z.object({
  * Profile retrieval response.
  */
 export const ReadBuilderProfileResponse = ApiSuccessResponse(BuilderProfileDto);
-export type ReadBuilderProfileResponse = z.infer<
-  typeof ReadBuilderProfileResponse
->;
+export type ReadBuilderProfileResponse = z.infer<typeof ReadBuilderProfileResponse>;
 
 /**
  * Builder deletion response.
@@ -48,14 +47,10 @@ export type DeleteBuilderResponse = z.infer<typeof DeleteBuilderResponse>;
 export const UpdateBuilderProfileRequest = z.object({
   name: Name,
 });
-export type UpdateBuilderProfileRequest = z.infer<
-  typeof UpdateBuilderProfileRequest
->;
+export type UpdateBuilderProfileRequest = z.infer<typeof UpdateBuilderProfileRequest>;
 
 /**
  * Profile update response.
  */
 export const UpdateBuilderProfileResponse = z.string();
-export type UpdateBuilderProfileResponse = z.infer<
-  typeof UpdateBuilderProfileResponse
->;
+export type UpdateBuilderProfileResponse = z.infer<typeof UpdateBuilderProfileResponse>;

@@ -13,9 +13,7 @@ export type Sort = Record<string, 1 | -1>;
 /**
  * Zod schema for the sort query parameter.
  */
-export const SortSchema = z
-  .record(z.string(), z.union([z.literal(1), z.literal(-1)]))
-  .optional();
+export const SortSchema = z.record(z.string(), z.union([z.literal(1), z.literal(-1)])).optional();
 
 /**
  * UUID string type.
@@ -49,6 +47,7 @@ export type PaginationQuery = z.infer<typeof PaginationQuerySchema>;
  * A generic factory for creating a paginated response schema.
  * @param dataSchema The Zod schema for the items in the data array.
  */
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type -- complex generic return type is correctly inferred
 export const PaginatedResponse = <T extends z.ZodTypeAny>(dataSchema: T) =>
   z.object({
     data: z.array(dataSchema),
@@ -71,7 +70,7 @@ export type PaginationBody = z.infer<typeof PaginationBodySchema>;
 /**
  *
  */
-export const ApiSuccessResponse = <T extends z.ZodType>(Schema: T) =>
+export const ApiSuccessResponse = <T extends z.ZodType>(Schema: T): z.ZodObject<{ data: T }> =>
   z.object({
     data: Schema,
   });

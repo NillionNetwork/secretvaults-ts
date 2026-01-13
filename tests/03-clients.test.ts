@@ -1,7 +1,9 @@
 import * as crypto from "node:crypto";
+
+import type { DidString } from "#/dto/common";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
-import type { DidString } from "#/dto/common";
+
 import collectionJson from "./data/owned.collection.json";
 import queryJson from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";

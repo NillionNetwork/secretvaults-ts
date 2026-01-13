@@ -1,10 +1,12 @@
-import { faker } from "@faker-js/faker";
-import { Builder, type Command, NilauthClient, Signer } from "@nillion/nuc";
-import { describe } from "vitest";
 import { SecretVaultBuilderClient } from "#/builder";
 import { NucCmd } from "#/common/nuc-cmd";
 import { pause } from "#/common/utils";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
+import { faker } from "@faker-js/faker";
+import { describe } from "vitest";
+
+import { Builder, type Command, NilauthClient, Signer } from "@nillion/nuc";
+
 import collection from "./data/owned.collection.json";
 import query from "./data/owned.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -40,10 +42,7 @@ describe("owned-data.test.ts", () => {
     });
 
     const otherBuilderDid = await otherBuilder.getDid();
-    log.info(
-      { did: otherBuilderDid.didString },
-      "Paying for otherBuilder subscription",
-    );
+    log.info({ did: otherBuilderDid.didString }, "Paying for otherBuilder subscription");
     await payer.nilauth.payAndValidate(
       Signer.fromPrivateKey(process.env.APP_NILCHAIN_PRIVATE_KEY_0!),
       otherBuilderDid,
@@ -130,9 +129,7 @@ describe("owned-data.test.ts", () => {
     }
   });
 
-  test("user can list data references with default pagination", async ({
-    c,
-  }) => {
+  test("user can list data references with default pagination", async ({ c }) => {
     const { user, expect } = c;
 
     const result = await user.listDataReferences();
@@ -143,9 +140,7 @@ describe("owned-data.test.ts", () => {
     expect(result.pagination.offset).toBe(0);
   });
 
-  test("user can list data references with explicit pagination", async ({
-    c,
-  }) => {
+  test("user can list data references with explicit pagination", async ({ c }) => {
     const { user, builder, expect } = c;
 
     const userDid = await user.getDid();
@@ -222,9 +217,7 @@ describe("owned-data.test.ts", () => {
     });
 
     // Assert against the single, unified response's ACL
-    const otherBuilderAcl = dataResult.data._acl.find(
-      (acl) => acl.grantee === otherBuilderDid.didString,
-    );
+    const otherBuilderAcl = dataResult.data._acl.find((acl) => acl.grantee === otherBuilderDid.didString);
 
     expect(otherBuilderAcl).toBeDefined();
     expect(otherBuilderAcl!.read).toBe(true);
@@ -262,9 +255,7 @@ describe("owned-data.test.ts", () => {
       document: record._id,
     });
 
-    const otherBuilderAcl = result.data._acl.find(
-      (acl) => acl.grantee === otherBuilderDid.didString,
-    );
+    const otherBuilderAcl = result.data._acl.find((acl) => acl.grantee === otherBuilderDid.didString);
     expect(otherBuilderAcl).toBeUndefined();
   });
 

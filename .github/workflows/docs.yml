@@ -8,11 +8,11 @@ on:
   push:
     branches:
       - main
-      - 'feat/**'
+      - "feat/**"
   pull_request:
     branches:
       - main
-      - 'feat/**'
+      - "feat/**"
 
 permissions:
   contents: write
@@ -35,8 +35,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

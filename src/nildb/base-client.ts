@@ -1,12 +1,10 @@
-import { Did } from "@nillion/nuc";
-import { z } from "zod";
 import { NilDbEndpoint } from "#/common/paths";
 import { isError, pause } from "#/common/utils";
-import {
-  NodeHealthCheckResponse,
-  ReadAboutNodeResponse,
-} from "#/dto/system.dto";
+import { NodeHealthCheckResponse, ReadAboutNodeResponse } from "#/dto/system.dto";
 import { Log } from "#/logger";
+import { z } from "zod";
+
+import { Did } from "@nillion/nuc";
 
 export const NilDbBaseClientOptions = z.object({
   about: ReadAboutNodeResponse,
@@ -42,12 +40,7 @@ export class NilDbBaseClient {
   /**
    * Handles error responses with consistent error information
    */
-  private handleErrorResponse(
-    response: Response,
-    method: string,
-    path: string,
-    body: unknown,
-  ): never {
+  private handleErrorResponse(response: Response, method: string, path: string, body: unknown): never {
     throw new Error(`Request failed: ${method} ${path}`, {
       cause: {
         body,
@@ -94,9 +87,7 @@ export class NilDbBaseClient {
       const cause = (error as { cause?: { status?: number } }).cause;
       if (cause?.status) {
         // Retry on 5xx errors and specific 4xx errors
-        return (
-          cause.status >= 500 || cause.status === 429 || cause.status === 408
-        );
+        return cause.status >= 500 || cause.status === 429 || cause.status === 408;
       }
     }
 
@@ -152,7 +143,7 @@ export class NilDbBaseClient {
     token?: string;
     method?: "GET" | "POST" | "DELETE";
     body?: Record<string, unknown>;
-    // biome-ignore lint/suspicious/noExplicitAny: these enable more ergonomic types in the test client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- enables more ergonomic types in the test client
     responseSchema: z.Schema<TSuccess, any, any>;
   }): Promise<TSuccess> {
     const { path, token, method = "GET", body, responseSchema } = options;
