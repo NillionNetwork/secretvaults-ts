@@ -9,6 +9,10 @@ concurrency:
   group: "publish"
   cancel-in-progress: true
 
+permissions:
+  id-token: write # Required for NPM Trusted Publisher
+  contents: read
+
 jobs:
   check-version:
     runs-on: ubuntu-latest
@@ -32,15 +36,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: "recursive"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
       - uses: pnpm/action-setup@v4
       - run: pnpm install
+      - run: pnpm check
       - run: pnpm build
-      - env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm publish --tag ${{ needs.check-version.outputs.tag }} --no-git-checks
+      - run: pnpm publish --provenance --access public
