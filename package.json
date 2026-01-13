@@ -3,6 +3,10 @@
   "version": "2.0.0",
   "description": "A client for interacting with nillion's nildb blind module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NillionNetwork/secretvaults-ts"
+  },
   "files": [
     "dist",
     "LICENSE",
