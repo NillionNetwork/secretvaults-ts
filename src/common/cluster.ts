@@ -1,9 +1,10 @@
-import type { ClusterKey, SecretKey } from "@nillion/blindfold";
-import _ from "es-toolkit/compat";
 import { conceal, reveal } from "#/common/blindfold";
 import type { ByNodeName, DidString } from "#/dto/common";
 import { Log } from "#/logger";
 import type { NilDbBaseClient } from "#/nildb/base-client";
+import _ from "es-toolkit/compat";
+
+import type { ClusterKey, SecretKey } from "@nillion/blindfold";
 
 /**
  * Executes an asynchronous operation on a list of clients in parallel.
@@ -82,9 +83,7 @@ export async function executeOnCluster<Client extends NilDbBaseClient, T>(
  * //   "node3": { data: [{ foo: "bar", value: {"%share": "encrypted-share-3"} }] },
  * // }
  */
-export async function prepareRequest<
-  T extends Record<string, unknown>,
->(options: {
+export async function prepareRequest<T extends Record<string, unknown>>(options: {
   key: SecretKey | ClusterKey | undefined;
   clients: NilDbBaseClient[];
   body: T;
@@ -119,16 +118,10 @@ export async function prepareRequest<
 /**
  * Selects a single canonical response from a map of node results.
  */
-export function processPlaintextResponse<T>(
-  results: ByNodeName<T>,
-  strategy: "first" | "random" = "first",
-): T {
+export function processPlaintextResponse<T>(results: ByNodeName<T>, strategy: "first" | "random" = "first"): T {
   const values = Object.values(results);
 
-  Log.debug(
-    { nodes: values.length, strategy },
-    "Processing plaintext response",
-  );
+  Log.debug({ nodes: values.length, strategy }, "Processing plaintext response");
 
   // 1. Determine the index based on the chosen strategy.
   let index = 0; // Default to 'first'
@@ -154,9 +147,7 @@ export function processPlaintextResponse<T>(
 /**
  * Processes and reveals a list of documents from a cluster response.
  */
-export async function processConcealedListResponse<
-  T extends { data: Record<string, unknown>[] },
->(options: {
+export async function processConcealedListResponse<T extends { data: Record<string, unknown>[] }>(options: {
   key: SecretKey | ClusterKey;
   resultsByNode: ByNodeName<T>;
 }): Promise<Record<string, unknown>[]> {
@@ -186,22 +177,14 @@ export async function processConcealedListResponse<
     return acc;
   }, new Map<string, Record<string, unknown>[]>());
 
-  Log.debug(
-    { documentCount: groupedShares.size },
-    "Grouped shares by document ID",
-  );
+  Log.debug({ documentCount: groupedShares.size }, "Grouped shares by document ID");
 
   // 3. Create an array of reveal promises, one for each document group.
-  const revealPromises = Array.from(groupedShares.values()).map((shares) =>
-    reveal(key, shares),
-  );
+  const revealPromises = Array.from(groupedShares.values()).map((shares) => reveal(key, shares));
 
   // 4. Await all reveal operations to run in parallel for maximum efficiency.
   const revealed = await Promise.all(revealPromises);
-  Log.debug(
-    { revealedCount: revealed.length },
-    "Documents revealed successfully",
-  );
+  Log.debug({ revealedCount: revealed.length }, "Documents revealed successfully");
 
   return revealed;
 }
@@ -209,9 +192,7 @@ export async function processConcealedListResponse<
 /**
  * Processes and reveals a single document from a cluster response.
  */
-export async function processConcealedObjectResponse<
-  T extends { data: Record<string, unknown> },
->(options: {
+export async function processConcealedObjectResponse<T extends { data: Record<string, unknown> }>(options: {
   key: SecretKey | ClusterKey;
   resultsByNode: ByNodeName<T>;
 }): Promise<Record<string, unknown>> {

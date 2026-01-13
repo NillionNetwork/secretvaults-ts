@@ -1,17 +1,16 @@
 #!/usr/bin/env tsx
 
 import { appendFileSync } from "node:fs";
+
 import semver from "semver";
+
 import packageJson from "../package.json";
 
 interface NpmRegistryResponse {
   "dist-tags": Record<string, string>;
 }
 
-async function getNpmVersion(
-  packageName: string,
-  distTag: string,
-): Promise<string> {
+async function getNpmVersion(packageName: string, distTag: string): Promise<string> {
   const response = await fetch(`https://registry.npmjs.org/${packageName}`);
   if (response.ok) {
     const data = (await response.json()) as NpmRegistryResponse;

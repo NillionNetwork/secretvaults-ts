@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-  ApiSuccessResponse,
-  PaginatedResponse,
-  PaginationQuerySchema,
-} from "./common";
+
+import { ApiSuccessResponse, PaginatedResponse, PaginationQuerySchema } from "./common";
 
 /**
  * Collection document data.
@@ -23,9 +20,7 @@ export const CollectionDocuments = z.array(CollectionDocumentDto);
  * Collections list request query parameters.
  */
 export const ListCollectionsRequestQuery = PaginationQuerySchema;
-export type ListCollectionsRequestQuery = z.infer<
-  typeof ListCollectionsRequestQuery
->;
+export type ListCollectionsRequestQuery = z.infer<typeof ListCollectionsRequestQuery>;
 
 /**
  * Collections list response.
@@ -50,17 +45,13 @@ export const CreateCollectionIndexRequest = z.object({
   unique: z.boolean(),
   ttl: z.number().optional(),
 });
-export type CreateCollectionIndexRequest = z.infer<
-  typeof CreateCollectionIndexRequest
->;
+export type CreateCollectionIndexRequest = z.infer<typeof CreateCollectionIndexRequest>;
 
 /**
  * Collection index creation response.
  */
 export const CreateCollectionIndexResponse = z.string();
-export type CreateCollectionIndexResponse = z.infer<
-  typeof CreateCollectionIndexResponse
->;
+export type CreateCollectionIndexResponse = z.infer<typeof CreateCollectionIndexResponse>;
 
 /**
  * Drop collection index parameters.
@@ -70,17 +61,13 @@ export const DropCollectionIndexParams = z.object({
   name: z.string().min(4).max(50),
 });
 
-export type DropCollectionIndexParams = z.infer<
-  typeof DropCollectionIndexParams
->;
+export type DropCollectionIndexParams = z.infer<typeof DropCollectionIndexParams>;
 
 /**
  * Drop collection index response.
  */
 export const DropCollectionIndexResponse = z.string();
-export type DropCollectionIndexResponse = z.infer<
-  typeof DropCollectionIndexResponse
->;
+export type DropCollectionIndexResponse = z.infer<typeof DropCollectionIndexResponse>;
 
 /**
  * Collection creation request.
@@ -105,9 +92,7 @@ export type CreateCollectionResponse = z.infer<typeof CreateCollectionResponse>;
 export const DeleteCollectionRequestParams = z.object({
   id: z.uuid(),
 });
-export type DeleteCollectionRequestParams = z.infer<
-  typeof DeleteCollectionRequestParams
->;
+export type DeleteCollectionRequestParams = z.infer<typeof DeleteCollectionRequestParams>;
 
 /**
  * Collection deletion response.
@@ -121,9 +106,7 @@ export type DeleteCollectionResponse = z.infer<typeof DeleteCollectionResponse>;
 export const ReadCollectionMetadataRequestParams = z.object({
   id: z.uuid(),
 });
-export type ReadCollectionMetadataRequestParams = z.infer<
-  typeof ReadCollectionMetadataRequestParams
->;
+export type ReadCollectionMetadataRequestParams = z.infer<typeof ReadCollectionMetadataRequestParams>;
 
 /**
  * Collection index data.
@@ -151,9 +134,5 @@ export const CollectionMetadataDto = z.object({
 /**
  * Collection metadata response.
  */
-export const ReadCollectionMetadataResponse = ApiSuccessResponse(
-  CollectionMetadataDto,
-);
-export type ReadCollectionMetadataResponse = z.infer<
-  typeof ReadCollectionMetadataResponse
->;
+export const ReadCollectionMetadataResponse = ApiSuccessResponse(CollectionMetadataDto);
+export type ReadCollectionMetadataResponse = z.infer<typeof ReadCollectionMetadataResponse>;

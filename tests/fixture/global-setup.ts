@@ -8,7 +8,7 @@ const composeOptions = {
   composeOptions: [["--project-name", "secretvaults-tests"]],
 };
 
-export async function setup(_project: TestProject) {
+export async function setup(_project: TestProject): Promise<void> {
   console.log("🚀 Starting containers...");
   config({ path: ".env.test" });
 
@@ -16,8 +16,7 @@ export async function setup(_project: TestProject) {
     // Check if containers are already running
     const psResult = await dockerCompose.ps(composeOptions);
     const allServicesUp =
-      psResult.data.services?.length > 0 &&
-      psResult.data.services.every((service) => service.state?.includes("Up"));
+      psResult.data.services?.length > 0 && psResult.data.services.every((service) => service.state?.includes("Up"));
 
     if (allServicesUp) {
       console.log("✅ Containers already running, skipping startup.");
@@ -27,13 +26,8 @@ export async function setup(_project: TestProject) {
     console.log("Waiting for services to become healthy...");
     await dockerCompose.upAll(composeOptions);
 
-    const nildbUrls = process.env.APP_NILDB_NODES.split(",").map((url) =>
-      url.replace("localhost", "127.0.0.1"),
-    );
-    const nilauthUrl = process.env.APP_NILAUTH_BASE_URL!.replace(
-      "localhost",
-      "127.0.0.1",
-    );
+    const nildbUrls = process.env.APP_NILDB_NODES.split(",").map((url) => url.replace("localhost", "127.0.0.1"));
+    const nilauthUrl = process.env.APP_NILAUTH_BASE_URL!.replace("localhost", "127.0.0.1");
 
     const healthChecks = [
       ...nildbUrls.map((url) => retry(() => checkServiceHealth(url), url)),
@@ -42,16 +36,14 @@ export async function setup(_project: TestProject) {
 
     await Promise.all(healthChecks);
 
-    console.log(
-      "✅ All services are healthy. Containers started successfully.",
-    );
+    console.log("✅ All services are healthy. Containers started successfully.");
   } catch (error) {
     console.error("❌ Error starting containers: ", error);
     process.exit(1);
   }
 }
 
-export async function teardown(_project: TestProject) {
+export async function teardown(_project: TestProject): Promise<void> {
   // Skip teardown if KEEP_INFRA environment variable is set
   if (process.env.KEEP_INFRA === "true") {
     console.log("🔄 Keeping infrastructure running as KEEP_INFRA=true");
@@ -75,15 +67,12 @@ async function checkServiceHealth(url: string): Promise<boolean> {
     if (!response.ok) return false;
     const data: any = await response.json();
     return "public_key" in data;
-  } catch (_error) {
+  } catch {
     return false;
   }
 }
 
-async function retry(
-  fn: () => Promise<boolean>,
-  serviceName: string,
-): Promise<void> {
+async function retry(fn: () => Promise<boolean>, serviceName: string): Promise<void> {
   for (let i = 0; i < MAX_RETRIES; i++) {
     if (await fn()) {
       console.log(`✅ ${serviceName} is healthy.`);

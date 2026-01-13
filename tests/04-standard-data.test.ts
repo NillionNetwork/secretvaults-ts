@@ -1,9 +1,11 @@
 import * as crypto from "node:crypto";
-import { faker } from "@faker-js/faker";
-import { describe } from "vitest";
+
 import { pause } from "#/common/utils";
 import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import type { ByNodeName, DidString } from "#/dto/common";
+import { faker } from "@faker-js/faker";
+import { describe } from "vitest";
+
 import collection from "./data/standard.collection.json";
 import query from "./data/standard.query.json";
 import { createFixture } from "./fixture/fixture";
@@ -186,13 +188,10 @@ describe("standard-data.test.ts", () => {
       _id: query._id,
       variables: { name: "tim" },
     });
-    const runs = Object.keys(runResults).reduce(
-      (acc, id) => {
-        acc[id] = runResults[id].data;
-        return acc;
-      },
-      {} as ByNodeName<string>,
-    );
+    const runs = Object.keys(runResults).reduce((acc, id) => {
+      acc[id] = runResults[id].data;
+      return acc;
+    }, {} as ByNodeName<string>);
 
     const results = await waitForQueryRun(c, runs);
     const node153c = results[nildbAId].data;
@@ -242,11 +241,7 @@ describe("standard-data.test.ts", () => {
     expect(result[nildbAId]).toEqual("");
     expect(result[nildbBId]).toEqual("");
 
-    const builders = await db
-      .db("nildb-1")
-      .collection("builders")
-      .find({})
-      .toArray();
+    const builders = await db.db("nildb-1").collection("builders").find({}).toArray();
     expect(builders).toHaveLength(0);
 
     const dataCollections = await db.db("nildb-1_data").collections();

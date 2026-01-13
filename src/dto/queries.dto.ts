@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-  ApiSuccessResponse,
-  PaginatedResponse,
-  PaginationQuerySchema,
-} from "./common";
+
+import { ApiSuccessResponse, PaginatedResponse, PaginationQuerySchema } from "./common";
 
 /**
  * MongoDB aggregation pipeline variable validation.
@@ -13,7 +10,6 @@ const VariablePath = z
   .string()
   .transform((path) => PATH_EXPRESSION.exec(path))
   .refine((match) => match !== null, "invalid PATH")
-  // @ts-expect-error the refine previous checks for null
   .transform((match) => match[0]);
 
 /**
@@ -101,12 +97,7 @@ export type RunQueryResponse = z.infer<typeof RunQueryResponse>;
 /**
  * Query execution status.
  */
-export const RunQueryResultStatus = z.enum([
-  "pending",
-  "running",
-  "complete",
-  "error",
-]);
+export const RunQueryResultStatus = z.enum(["pending", "running", "complete", "error"]);
 export type RunQueryResultStatus = z.infer<typeof RunQueryResultStatus>;
 
 /**
@@ -126,9 +117,7 @@ const ReadQueryRunByIdDto = z.object({
  * Query run read request query parameters.
  */
 export const ReadQueryRunByIdRequestQuery = PaginationQuerySchema;
-export type ReadQueryRunByIdRequestQuery = z.infer<
-  typeof ReadQueryRunByIdRequestQuery
->;
+export type ReadQueryRunByIdRequestQuery = z.infer<typeof ReadQueryRunByIdRequestQuery>;
 
 export const ReadQueryRunByIdResponse = z.object({
   data: ReadQueryRunByIdDto,

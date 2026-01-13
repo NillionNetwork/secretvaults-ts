@@ -43,12 +43,12 @@ Service URLs for different environments can be found in the [Nillion Network Con
 
 ```typescript
 const urls = {
-  chain: 'http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz',
-  auth: 'https://nilauth.sandbox.app-cluster.sandbox.nilogy.xyz',
+  chain: "http://rpc.testnet.nilchain-rpc-proxy.nilogy.xyz",
+  auth: "https://nilauth.sandbox.app-cluster.sandbox.nilogy.xyz",
   dbs: [
-    'https://nildb-stg-n1.nillion.network',
-    'https://nildb-stg-n2.nillion.network',
-    'https://nildb-stg-n3.nillion.network',
+    "https://nildb-stg-n1.nillion.network",
+    "https://nildb-stg-n2.nillion.network",
+    "https://nildb-stg-n3.nillion.network",
   ],
 };
 ```
@@ -61,7 +61,7 @@ The library uses typed errors and provides detailed error information:
 try {
   await builderClient.createCollection(collection);
 } catch (error) {
-  console.error('Failed to create collection:', error.message);
+  console.error("Failed to create collection:", error.message);
   // Handle specific error types
 }
 ```

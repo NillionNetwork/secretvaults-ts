@@ -1,18 +1,4 @@
-import {
-  Builder,
-  Codec,
-  type Envelope,
-  type NilauthClient,
-  type NilauthTypes,
-  type Did as NucDid,
-  type Signer,
-  Validator,
-} from "@nillion/nuc";
-import {
-  type AuthContext,
-  SecretVaultBaseClient,
-  type SecretVaultBaseOptions,
-} from "#/base";
+import { type AuthContext, SecretVaultBaseClient, type SecretVaultBaseOptions } from "#/base";
 import type {
   DeleteBuilderResponse,
   ReadBuilderProfileResponse,
@@ -31,13 +17,7 @@ import type {
   ListCollectionsResponse,
   ReadCollectionMetadataResponse,
 } from "#/dto/collections.dto";
-import type {
-  ByNodeName,
-  DidString,
-  Name,
-  PaginationQuery,
-  Uuid,
-} from "#/dto/common";
+import type { ByNodeName, DidString, Name, PaginationQuery, Uuid } from "#/dto/common";
 import type {
   CreateDataResponse,
   CreateStandardDataRequest,
@@ -61,10 +41,11 @@ import type {
   RunQueryResponse,
 } from "#/dto/queries.dto";
 import { Log } from "#/logger";
-import {
-  type BlindfoldFactoryConfig,
-  toBlindfoldKey,
-} from "./common/blindfold";
+
+import type { NilauthClient, SubscriptionStatusResponse } from "@nillion/nilauth-client";
+import { Builder, Codec, type Envelope, type Did as NucDid, type Signer, Validator } from "@nillion/nuc";
+
+import { type BlindfoldFactoryConfig, toBlindfoldKey } from "./common/blindfold";
 import {
   executeOnCluster,
   prepareRequest,
@@ -72,19 +53,15 @@ import {
   processPlaintextResponse,
 } from "./common/cluster";
 import { NucCmd } from "./common/nuc-cmd";
-import {
-  createNilDbBuilderClient,
-  type NilDbBuilderClient,
-} from "./nildb/builder-client";
+import { createNilDbBuilderClient, type NilDbBuilderClient } from "./nildb/builder-client";
 
 /**
  *
  */
-export type SecretVaultBuilderOptions =
-  SecretVaultBaseOptions<NilDbBuilderClient> & {
-    nilauthClient: NilauthClient;
-    rootToken?: Envelope | string;
-  };
+export type SecretVaultBuilderOptions = SecretVaultBaseOptions<NilDbBuilderClient> & {
+  nilauthClient: NilauthClient;
+  rootToken?: Envelope | string;
+};
 
 /**
  * Client for performing builder operations on SecretVaults.
@@ -125,13 +102,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     blindfold?: BlindfoldFactoryConfig;
     rootToken?: Envelope | string;
   }): Promise<SecretVaultBuilderClient> {
-    const {
-      dbs: baseUrls,
-      signer,
-      blindfold,
-      nilauthClient,
-      rootToken,
-    } = options;
+    const { dbs: baseUrls, signer, blindfold, nilauthClient, rootToken } = options;
 
     const did = await signer.getDid();
 
@@ -145,9 +116,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     );
 
     // Create clients for each node
-    const clientPromises = baseUrls.map((base) =>
-      createNilDbBuilderClient(base),
-    );
+    const clientPromises = baseUrls.map((base) => createNilDbBuilderClient(base));
     const clients = await Promise.all(clientPromises);
 
     let client: SecretVaultBuilderClient;
@@ -210,9 +179,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     if (options.rootToken) {
       if (typeof options.rootToken === "string") {
         this.#rootToken = Codec._unsafeDecodeBase64Url(options.rootToken);
-        Log.debug(
-          "Root token re-hydrated using _unsafeDecodeBase64Url(string)",
-        );
+        Log.debug("Root token re-hydrated using _unsafeDecodeBase64Url(string)");
       } else {
         this.#rootToken = options.rootToken;
         Log.debug("Root token re-hydrated from Envelope object");
@@ -232,10 +199,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    */
   async refreshRootToken(): Promise<void> {
     Log.debug("Refreshing root token");
-    const response = await this.#nilauthClient.requestToken(
-      this._options.signer,
-      "nildb",
-    );
+    const response = await this.#nilauthClient.requestToken(this._options.signer, "nildb");
 
     this.#rootToken = response.token;
     Log.info({ builder: await this.getId() }, "Root token refreshed");
@@ -244,16 +208,14 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Checks subscription status by the builder's Did.
    */
-  async subscriptionStatus(): Promise<NilauthTypes.SubscriptionStatusResponse> {
+  async subscriptionStatus(): Promise<SubscriptionStatusResponse> {
     return this.#nilauthClient.subscriptionStatus(await this.getDid(), "nildb");
   }
 
   /**
    * Registers the builder with all nodes in the cluster.
    */
-  async register(
-    body: RegisterBuilderRequest,
-  ): Promise<ByNodeName<RegisterBuilderResponse>> {
+  async register(body: RegisterBuilderRequest): Promise<ByNodeName<RegisterBuilderResponse>> {
     const result = await executeOnCluster(this.nodes, (c) => c.register(body));
     Log.info({ builder: await this.getId() }, "Builder registered");
     return result;
@@ -262,9 +224,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Reads the builder's profile from the cluster.
    */
-  async readProfile(options?: {
-    auth?: AuthContext;
-  }): Promise<ReadBuilderProfileResponse> {
+  async readProfile(options?: { auth?: AuthContext }): Promise<ReadBuilderProfileResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -297,19 +257,14 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.updateProfile(token, body);
     });
 
-    Log.info(
-      { builder: await this.getId(), updateFields: Object.keys(body) },
-      "Builder profile updated",
-    );
+    Log.info({ builder: await this.getId(), updateFields: Object.keys(body) }, "Builder profile updated");
     return result;
   }
 
   /**
    * Deletes the builder and associated resources from all nodes.
    */
-  async deleteBuilder(options?: {
-    auth?: AuthContext;
-  }): Promise<ByNodeName<DeleteBuilderResponse>> {
+  async deleteBuilder(options?: { auth?: AuthContext }): Promise<ByNodeName<DeleteBuilderResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -341,10 +296,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       return client.createCollection(token, body);
     });
 
-    Log.info(
-      { builder: await this.getId(), collection: body.name },
-      "Collection created",
-    );
+    Log.info({ builder: await this.getId(), collection: body.name }, "Collection created");
     return result;
   }
 
@@ -381,10 +333,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Reads the metadata for a single collection.
    */
-  async readCollection(
-    collection: Uuid,
-    options?: { auth?: AuthContext },
-  ): Promise<ReadCollectionMetadataResponse> {
+  async readCollection(collection: Uuid, options?: { auth?: AuthContext }): Promise<ReadCollectionMetadataResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -397,10 +346,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     const result = processPlaintextResponse(resultsByNode);
 
-    Log.info(
-      { builder: await this.getId(), collection },
-      "Collection metadata read",
-    );
+    Log.info({ builder: await this.getId(), collection }, "Collection metadata read");
     return result;
   }
 
@@ -524,10 +470,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Retrieves a list of all saved queries.
    */
-  async getQueries(options?: {
-    pagination?: PaginationQuery;
-    auth?: AuthContext;
-  }): Promise<ReadQueriesResponse> {
+  async getQueries(options?: { pagination?: PaginationQuery; auth?: AuthContext }): Promise<ReadQueriesResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -540,20 +483,14 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     const result = processPlaintextResponse(resultsByNode);
 
-    Log.info(
-      { builder: await this.getId(), count: result.data?.length || 0 },
-      "Queries read",
-    );
+    Log.info({ builder: await this.getId(), count: result.data?.length || 0 }, "Queries read");
     return result;
   }
 
   /**
    * Retrieves a single saved query by its id.
    */
-  async getQuery(
-    query: Uuid,
-    options?: { auth?: AuthContext },
-  ): Promise<ByNodeName<ReadQueryResponse>> {
+  async getQuery(query: Uuid, options?: { auth?: AuthContext }): Promise<ByNodeName<ReadQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -601,10 +538,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Deletes a saved query from all nodes.
    */
-  async deleteQuery(
-    query: Uuid,
-    options?: { auth?: AuthContext },
-  ): Promise<ByNodeName<DeleteQueryResponse>> {
+  async deleteQuery(query: Uuid, options?: { auth?: AuthContext }): Promise<ByNodeName<DeleteQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -622,10 +556,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Starts a query execution job.
    */
-  async runQuery(
-    body: RunQueryRequest,
-    options?: { auth?: AuthContext },
-  ): Promise<ByNodeName<RunQueryResponse>> {
+  async runQuery(body: RunQueryRequest, options?: { auth?: AuthContext }): Promise<ByNodeName<RunQueryResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -670,10 +601,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Finds data in a collection, revealing concealed values if a key is configured.
    */
-  async findData(
-    body: FindDataRequest,
-    options?: { auth?: AuthContext },
-  ): Promise<FindDataResponse> {
+  async findData(body: FindDataRequest, options?: { auth?: AuthContext }): Promise<FindDataResponse> {
     const resultsByNode = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -713,10 +641,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Updates documents in a collection, concealing the update payload if a key is configured.
    */
-  async updateData(
-    body: UpdateDataRequest,
-    options?: { auth?: AuthContext },
-  ): Promise<ByNodeName<UpdateDataResponse>> {
+  async updateData(body: UpdateDataRequest, options?: { auth?: AuthContext }): Promise<ByNodeName<UpdateDataResponse>> {
     const { key, clients } = this._options;
 
     const nodePayloads = await prepareRequest({ key, clients, body });
@@ -746,10 +671,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Deletes data from a collection based on a filter.
    */
-  async deleteData(
-    body: DeleteDataRequest,
-    options?: { auth?: AuthContext },
-  ): Promise<ByNodeName<DeleteDataResponse>> {
+  async deleteData(body: DeleteDataRequest, options?: { auth?: AuthContext }): Promise<ByNodeName<DeleteDataResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -775,10 +697,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Deletes all data from a collection.
    */
-  async flushData(
-    collection: Uuid,
-    options?: { auth?: AuthContext },
-  ): Promise<ByNodeName<FlushDataResponse>> {
+  async flushData(collection: Uuid, options?: { auth?: AuthContext }): Promise<ByNodeName<FlushDataResponse>> {
     const result = await executeOnCluster(this.nodes, async (client) => {
       const token = await this.getInvocationFor({
         auth: options?.auth,
@@ -796,10 +715,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Reads the last N documents from a collection, revealing concealed values if a key is configured.
    */
-  async tailData(
-    collection: Uuid,
-    options?: { limit?: number; auth?: AuthContext },
-  ): Promise<TailDataResponse> {
+  async tailData(collection: Uuid, options?: { limit?: number; auth?: AuthContext }): Promise<TailDataResponse> {
     const limit = options?.limit ?? 10;
     Log.debug({ collection, limit }, "Tailing data");
 
@@ -827,11 +743,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     return result;
   }
 
-  private async getInvocationFor(options: {
-    auth?: AuthContext;
-    audience: NucDid;
-    command: string;
-  }): Promise<string> {
+  private async getInvocationFor(options: { auth?: AuthContext; audience: NucDid; command: string }): Promise<string> {
     const { auth, audience, command } = options;
 
     if (auth?.invocations) {
@@ -839,9 +751,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       if (invocation) {
         return Promise.resolve(invocation);
       }
-      throw new Error(
-        `Invocation for node ${audience.didString} not found in provided 'invocations' map.`,
-      );
+      throw new Error(`Invocation for node ${audience.didString} not found in provided 'invocations' map.`);
     }
 
     const signer = auth?.signer ?? this.signer;
@@ -854,13 +764,8 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       });
       // Calculate remaining lifetime from delegation to avoid exceeding parent's expiry
       const delegationExp = envelope.nuc.payload.exp;
-      const remainingMs = delegationExp
-        ? delegationExp * 1000 - Date.now() - expiryBuffer
-        : defaultExpiresIn;
-      const expiresIn = Math.min(
-        defaultExpiresIn,
-        Math.max(1_000, remainingMs),
-      );
+      const remainingMs = delegationExp ? delegationExp * 1000 - Date.now() - expiryBuffer : defaultExpiresIn;
+      const expiresIn = Math.min(defaultExpiresIn, Math.max(1_000, remainingMs));
 
       return Builder.invocationFrom(envelope)
         .audience(audience)
@@ -871,9 +776,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
 
     // Fallback to root token - also cap to remaining lifetime
     const rootExp = this.rootToken.nuc.payload.exp;
-    const remainingMs = rootExp
-      ? rootExp * 1000 - Date.now() - expiryBuffer
-      : defaultExpiresIn;
+    const remainingMs = rootExp ? rootExp * 1000 - Date.now() - expiryBuffer : defaultExpiresIn;
     const expiresIn = Math.min(defaultExpiresIn, Math.max(1_000, remainingMs));
 
     return Builder.invocationFrom(this.rootToken)

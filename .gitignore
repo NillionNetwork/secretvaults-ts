@@ -8,4 +8,4 @@ dist
 .env
 coverage
 docs
-CLAUDE.md
+tsconfig.tsbuildinfo

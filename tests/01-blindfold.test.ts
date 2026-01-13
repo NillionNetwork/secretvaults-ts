@@ -1,18 +1,11 @@
-import { ClusterKey, SecretKey } from "@nillion/blindfold";
+import { type BlindfoldFactoryConfig, conceal, reveal, toBlindfoldKey } from "#/common/blindfold";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  type BlindfoldFactoryConfig,
-  conceal,
-  reveal,
-  toBlindfoldKey,
-} from "#/common/blindfold";
+
+import { ClusterKey, SecretKey } from "@nillion/blindfold";
 
 describe("user provides the key", () => {
   it("returns the provided SecretKey", async () => {
-    const existingKey = await SecretKey.generate(
-      { nodes: [{}, {}] },
-      { store: true },
-    );
+    const existingKey = await SecretKey.generate({ nodes: [{}, {}] }, { store: true });
 
     const result = await toBlindfoldKey({
       key: existingKey,
@@ -24,10 +17,7 @@ describe("user provides the key", () => {
   });
 
   it("returns the provided ClusterKey", async () => {
-    const existingKey = await ClusterKey.generate(
-      { nodes: [{}, {}] },
-      { store: true },
-    );
+    const existingKey = await ClusterKey.generate({ nodes: [{}, {}] }, { store: true });
 
     const result = await toBlindfoldKey({
       key: existingKey,
