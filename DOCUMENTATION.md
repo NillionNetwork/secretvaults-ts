@@ -11,7 +11,8 @@ The library exposes two main clients: `SecretVaultBuilderClient` and `SecretVaul
 The `SecretVaultBuilderClient` is used by data producers to manage collections, queries, and standard data. It requires a `nilauthClient` for obtaining root tokens.
 
 ```typescript
-import { Signer, NilauthClient } from "@nillion/nuc";
+import { Signer } from "@nillion/nuc";
+import { NilauthClient } from "@nillion/nilauth-client";
 import { SecretVaultBuilderClient } from "@nillion/secretvaults";
 
 const builderSigner = Signer.generate();
@@ -108,7 +109,8 @@ To provide a seamless user experience without requiring re-authentication on eve
 3.  **Subsequent Visits**: On the next visit, create the client instance by passing the stored token string directly to the `from()` method. This bypasses the need to call `refreshRootToken()`.
 
 ```typescript
-import { Codec, Signer, NilauthClient } from "@nillion/nuc";
+import { Codec, Signer } from "@nillion/nuc";
+import { NilauthClient } from "@nillion/nilauth-client";
 import { SecretVaultBuilderClient } from "@nillion/secretvaults";
 
 const dbs = ["http://localhost:40081", "http://localhost:40082"];

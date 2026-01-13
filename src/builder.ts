@@ -42,16 +42,8 @@ import type {
 } from "#/dto/queries.dto";
 import { Log } from "#/logger";
 
-import {
-  Builder,
-  Codec,
-  type Envelope,
-  type NilauthClient,
-  type NilauthTypes,
-  type Did as NucDid,
-  type Signer,
-  Validator,
-} from "@nillion/nuc";
+import type { NilauthClient, SubscriptionStatusResponse } from "@nillion/nilauth-client";
+import { Builder, Codec, type Envelope, type Did as NucDid, type Signer, Validator } from "@nillion/nuc";
 
 import { type BlindfoldFactoryConfig, toBlindfoldKey } from "./common/blindfold";
 import {
@@ -216,7 +208,7 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Checks subscription status by the builder's Did.
    */
-  async subscriptionStatus(): Promise<NilauthTypes.SubscriptionStatusResponse> {
+  async subscriptionStatus(): Promise<SubscriptionStatusResponse> {
     return this.#nilauthClient.subscriptionStatus(await this.getDid(), "nildb");
   }
 

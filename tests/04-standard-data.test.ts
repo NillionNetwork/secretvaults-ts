@@ -188,13 +188,10 @@ describe("standard-data.test.ts", () => {
       _id: query._id,
       variables: { name: "tim" },
     });
-    const runs = Object.keys(runResults).reduce(
-      (acc, id) => {
-        acc[id] = runResults[id].data;
-        return acc;
-      },
-      {} as ByNodeName<string>,
-    );
+    const runs = Object.keys(runResults).reduce((acc, id) => {
+      acc[id] = runResults[id].data;
+      return acc;
+    }, {} as ByNodeName<string>);
 
     const results = await waitForQueryRun(c, runs);
     const node153c = results[nildbAId].data;

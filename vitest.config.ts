@@ -13,7 +13,7 @@ export default defineConfig({
     },
     // These force vitest to run the test suite with 1 worker
     // side-stepping the sequence mismatch issue caused when multiple tests
-    // try and share the same nilchain wallet
+    // try and share the same Ethereum wallet
     // ref: https://github.com/NillionNetwork/nildb/issues/174
     maxWorkers: 1,
     minWorkers: 1,

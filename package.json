@@ -29,10 +29,12 @@
   },
   "dependencies": {
     "@nillion/blindfold": "0.1.0",
-    "@nillion/nuc": "^1.1.1",
+    "@nillion/nilauth-client": "^2.0.0",
+    "@nillion/nuc": "^2.0.0",
     "es-toolkit": "^1.42.0",
     "pino": "^10.1.0",
     "uuid": "^13.0.0",
+    "viem": "^2.21.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {

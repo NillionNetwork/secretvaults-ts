@@ -5,7 +5,8 @@ import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
 
-import { Builder, type Command, NilauthClient, Signer } from "@nillion/nuc";
+import { NilauthClient } from "@nillion/nilauth-client";
+import { Builder, type Command, Signer } from "@nillion/nuc";
 
 import collection from "./data/owned.collection.json";
 import query from "./data/owned.query.json";
@@ -34,6 +35,7 @@ describe("owned-data.test.ts", () => {
     const otherBuilderSigner = Signer.generate();
     const otherNilauth = await NilauthClient.create({
       baseUrl: env.urls.auth,
+      chainId: env.chainId,
     });
     otherBuilder = await SecretVaultBuilderClient.from({
       signer: otherBuilderSigner,
@@ -43,11 +45,7 @@ describe("owned-data.test.ts", () => {
 
     const otherBuilderDid = await otherBuilder.getDid();
     log.info({ did: otherBuilderDid.didString }, "Paying for otherBuilder subscription");
-    await payer.nilauth.payAndValidate(
-      Signer.fromPrivateKey(process.env.APP_NILCHAIN_PRIVATE_KEY_0!),
-      otherBuilderDid,
-      "nildb",
-    );
+    await payer.evm.payForSubscription(payer.nilauth, payer.signer, otherBuilderDid, "nildb");
     await otherBuilder.refreshRootToken();
 
     await otherBuilder.register({

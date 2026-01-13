@@ -10,7 +10,6 @@ const VariablePath = z
   .string()
   .transform((path) => PATH_EXPRESSION.exec(path))
   .refine((match) => match !== null, "invalid PATH")
-  // @ts-expect-error the refine previous checks for null
   .transform((match) => match[0]);
 
 /**
