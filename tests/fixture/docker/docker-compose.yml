@@ -1,64 +1,16 @@
 services:
-  nil-anvil:
-    image: ghcr.io/nillionnetwork/nil-anvil:main
-    ports:
-      - "40545:8545"
-    healthcheck:
-      test: ["CMD", "cast", "chain-id", "--rpc-url", "http://localhost:8545"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  postgres:
-    image: postgres:18
-    environment:
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "40432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  nilauth:
-    image: ghcr.io/nillionnetwork/nilauth:main
-    depends_on:
-      postgres:
-        condition: service_healthy
-      nil-anvil:
-        condition: service_healthy
-    volumes:
-      - ./nilauth/config.yaml:/opt/config.yaml
-    command: ["--config-file", "/opt/config.yaml"]
-    ports:
-      - "40921:8080" # main api
-      - "40922:8081" # metrics
-
-  token-price-api:
-    image: caddy:2
-    ports:
-      - "40923:80"
-    command: |
-      caddy respond --listen :80 --body '{"nillion":{"usd":1}}' --header "Content-Type: application/json"
-
   nildb-1:
     image: ghcr.io/nillionnetwork/nildb:main
     depends_on:
       - mongo
-      - nilauth
     ports:
       - "40081:8080"
     environment:
       - APP_DB_NAME_BASE=nildb-1
       - APP_DB_URI=mongodb://mongo:27017
-      - APP_ENABLED_FEATURES=openapi,metrics,migrations
+      - APP_ENABLED_FEATURES=openapi,metrics,migrations,credits
       - APP_LOG_LEVEL=debug
       - APP_METRICS_PORT=9091
-      - APP_NILAUTH_BASE_URL=http://nilauth:8080
-      - APP_NILAUTH_PUBLIC_KEY=03520e70bd97a5fa6d70c614d50ee47bf445ae0b0941a1d61ddd5afa022b97ab14
-      - APP_NILAUTH_INSTANCES=http://nilauth:8080/03520e70bd97a5fa6d70c614d50ee47bf445ae0b0941a1d61ddd5afa022b97ab14
-      - APP_NILAUTH_CHAIN_ID=31337
       - APP_NODE_PUBLIC_ENDPOINT=http://127.0.0.1:40081
       - APP_NODE_SECRET_KEY=6cab2d10ac21886404eca7cbd40f1777071a243177eae464042885b391412b4e
       - APP_PORT=8080
@@ -68,19 +20,14 @@ services:
     image: ghcr.io/nillionnetwork/nildb:main
     depends_on:
       - mongo
-      - nilauth
     ports:
       - "40082:8080"
     environment:
       - APP_DB_NAME_BASE=nildb-2
       - APP_DB_URI=mongodb://mongo:27017
-      - APP_ENABLED_FEATURES=openapi,metrics,migrations
+      - APP_ENABLED_FEATURES=openapi,metrics,migrations,credits
       - APP_LOG_LEVEL=debug
       - APP_METRICS_PORT=9091
-      - APP_NILAUTH_BASE_URL=http://nilauth:8080
-      - APP_NILAUTH_PUBLIC_KEY=03520e70bd97a5fa6d70c614d50ee47bf445ae0b0941a1d61ddd5afa022b97ab14
-      - APP_NILAUTH_INSTANCES=http://nilauth:8080/03520e70bd97a5fa6d70c614d50ee47bf445ae0b0941a1d61ddd5afa022b97ab14
-      - APP_NILAUTH_CHAIN_ID=31337
       - APP_NODE_PUBLIC_ENDPOINT=http://127.0.0.1:40082
       - APP_NODE_SECRET_KEY=91771a344f5caa0b89bcb89e2d59f63e99ab0ff05f8519d839d600747638cf6c
       - APP_PORT=8080

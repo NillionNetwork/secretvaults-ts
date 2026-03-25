@@ -5,7 +5,6 @@ import type { CreateCollectionRequest } from "#/dto/collections.dto";
 import { faker } from "@faker-js/faker";
 import { describe } from "vitest";
 
-import { NilauthClient } from "@nillion/nilauth-client";
 import { Builder, type Command, Signer } from "@nillion/nuc";
 
 import collection from "./data/owned.collection.json";
@@ -25,31 +24,20 @@ describe("owned-data.test.ts", () => {
   let otherBuilder: SecretVaultBuilderClient;
 
   beforeAll(async (c) => {
-    const { builder, env, payer, log } = c;
+    const { builder, env } = c;
 
     await builder.register({
       did: (await builder.getDid()).didString,
       name: faker.company.name(),
     });
 
-    const otherBuilderSigner = Signer.generate();
-    const otherNilauth = await NilauthClient.create({
-      baseUrl: env.urls.auth,
-      chainId: env.chainId,
-    });
     otherBuilder = await SecretVaultBuilderClient.from({
-      signer: otherBuilderSigner,
+      signer: Signer.generate(),
       dbs: env.urls.dbs,
-      nilauthClient: otherNilauth,
     });
-
-    const otherBuilderDid = await otherBuilder.getDid();
-    log.info({ did: otherBuilderDid.didString }, "Paying for otherBuilder subscription");
-    await payer.evm.payForSubscription(payer.nilauth, payer.signer, otherBuilderDid, "nildb");
-    await otherBuilder.refreshRootToken();
 
     await otherBuilder.register({
-      did: otherBuilderDid.didString,
+      did: (await otherBuilder.getDid()).didString,
       name: faker.company.name(),
     });
   });
@@ -98,8 +86,9 @@ describe("owned-data.test.ts", () => {
     const userDid = await user.getDid();
     const builderDid = await builder.getDid();
 
-    const delegation = await Builder.delegationFrom(builder.rootToken)
+    const delegation = await Builder.delegation()
       .command(NucCmd.nil.db.data.create as Command)
+      .subject(await builder.getDid())
       .audience(userDid)
       .expiresIn(30_000)
       .signAndSerialize(builder.signer);
@@ -145,8 +134,9 @@ describe("owned-data.test.ts", () => {
     const builderDid = await builder.getDid();
 
     // Create more data to test pagination
-    const delegation = await Builder.delegationFrom(builder.rootToken)
+    const delegation = await Builder.delegation()
       .command(NucCmd.nil.db.data.create as Command)
+      .subject(await builder.getDid())
       .audience(userDid)
       .expiresIn(30_000)
       .signAndSerialize(builder.signer);

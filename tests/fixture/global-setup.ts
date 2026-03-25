@@ -27,12 +27,8 @@ export async function setup(_project: TestProject): Promise<void> {
     await dockerCompose.upAll(composeOptions);
 
     const nildbUrls = process.env.APP_NILDB_NODES.split(",").map((url) => url.replace("localhost", "127.0.0.1"));
-    const nilauthUrl = process.env.APP_NILAUTH_BASE_URL!.replace("localhost", "127.0.0.1");
 
-    const healthChecks = [
-      ...nildbUrls.map((url) => retry(() => checkServiceHealth(url), url)),
-      retry(() => checkServiceHealth(nilauthUrl), nilauthUrl),
-    ];
+    const healthChecks = nildbUrls.map((url) => retry(() => checkServiceHealth(url), url));
 
     await Promise.all(healthChecks);
 

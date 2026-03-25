@@ -33,7 +33,8 @@ describe("auth-context.test.ts", () => {
     // 1. Pre-mint invocations for each node in the cluster
     const invocations: Record<string, string> = {};
     for (const node of builder.nodes) {
-      invocations[node.id.didString] = await Builder.invocationFrom(builder.rootToken)
+      invocations[node.id.didString] = await Builder.invocation()
+        .subject(await builder.getDid())
         .audience(node.id)
         .command(NucCmd.nil.db.builders.read as Command)
         .expiresIn(30_000)
@@ -77,8 +78,9 @@ describe("auth-context.test.ts", () => {
     };
 
     // 1. Create the delegation that authorizes the user
-    const delegation = await Builder.delegationFrom(builder.rootToken)
+    const delegation = await Builder.delegation()
       .command(NucCmd.nil.db.data.create as Command)
+      .subject(await builder.getDid())
       .audience(userDid)
       .expiresIn(60_000)
       .signAndSerialize(builder.signer);

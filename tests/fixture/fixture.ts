@@ -4,10 +4,8 @@ import { MongoClient } from "mongodb";
 import type { Logger } from "pino";
 import * as vitest from "vitest";
 
-import { NilauthClient } from "@nillion/nilauth-client";
 import { Signer } from "@nillion/nuc";
 
-import { type EvmPayer, createEvmPayerFromEnv } from "./evm-payer";
 import { createTestLogger } from "./utils";
 
 /**
@@ -16,18 +14,10 @@ import { createTestLogger } from "./utils";
 export type FixtureContext = {
   env: {
     urls: {
-      ethereum: string;
-      auth: string;
       dbs: string[];
     };
-    chainId: number;
   };
   log: Logger;
-  payer: {
-    nilauth: NilauthClient;
-    evm: EvmPayer;
-    signer: Signer;
-  };
   builder: SecretVaultBuilderClient;
   user: SecretVaultUserClient;
   expect: vitest.ExpectStatic;
@@ -48,7 +38,6 @@ type TestFixtureExtension = {
  *
  */
 type CreateFixtureOptions = {
-  activateBuilderSubscription: boolean;
   keepDbs: boolean;
 };
 
@@ -57,7 +46,6 @@ type CreateFixtureOptions = {
  */
 export function createFixture(
   options: CreateFixtureOptions = {
-    activateBuilderSubscription: true,
     keepDbs: false,
   },
 ): TestFixtureExtension {
@@ -77,7 +65,7 @@ export function createFixture(
   const beforeAll = (fn: (c: FixtureContext) => Promise<void>): void =>
     vitest.beforeAll(async () => {
       try {
-        fixture = await buildContext(options);
+        fixture = await buildContext();
         await fn(fixture);
       } catch (cause) {
         // Fallback to `process.stderr` to ensure fixture setup failures are logged during suite setup/teardown
@@ -130,13 +118,9 @@ export function createFixture(
 /**
  *
  */
-async function buildContext(options: CreateFixtureOptions): Promise<FixtureContext> {
+async function buildContext(): Promise<FixtureContext> {
   const nildbNodesUrls = process.env.APP_NILDB_NODES.split(",");
-  const nilauthUrl = process.env.APP_NILAUTH_BASE_URL;
   const mongodbUri = process.env.APP_MONGODB_URI;
-  const ethereumRpcUrl = process.env.APP_ETHEREUM_RPC_URL;
-  const chainId = Number(process.env.APP_CHAIN_ID);
-  const payerPrivateKey = process.env.APP_PAYER_PRIVATE_KEY;
 
   const log = createTestLogger();
   const db = await MongoClient.connect(mongodbUri);
@@ -147,47 +131,18 @@ async function buildContext(options: CreateFixtureOptions): Promise<FixtureConte
     signer: Signer.generate(),
   });
 
-  // Create NilauthClient with chainId (new Ethereum-based API)
-  const nilauth = await NilauthClient.create({
-    baseUrl: nilauthUrl,
-    chainId,
-  });
-
-  // Create EVM payer for subscription payments
-  const evmPayer = createEvmPayerFromEnv();
-
-  // Create a signer for the payer (derived from the same private key, without 0x prefix)
-  const payerSigner = Signer.fromPrivateKey(payerPrivateKey.replace("0x", ""));
-
-  const builderSigner = Signer.generate();
   const builder = await SecretVaultBuilderClient.from({
-    signer: builderSigner,
+    signer: Signer.generate(),
     dbs: nildbNodesUrls,
-    nilauthClient: nilauth,
   });
-
-  if (options.activateBuilderSubscription) {
-    const builderDid = await builder.getDid();
-    log.info({ did: builderDid.didString }, "Paying for builder subscription");
-    await evmPayer.payForSubscription(nilauth, payerSigner, builderDid, "nildb");
-    await builder.refreshRootToken();
-  }
 
   return {
     env: {
       urls: {
-        ethereum: ethereumRpcUrl,
-        auth: nilauthUrl,
         dbs: nildbNodesUrls,
       },
-      chainId,
     },
     log,
-    payer: {
-      nilauth,
-      evm: evmPayer,
-      signer: payerSigner,
-    },
     builder,
     user,
     db,

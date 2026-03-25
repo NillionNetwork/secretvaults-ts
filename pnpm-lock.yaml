@@ -14,9 +14,6 @@ importers:
       '@nillion/blindfold':
         specifier: 0.1.0
         version: 0.1.0
-      '@nillion/nilauth-client':
-        specifier: ^2.0.0
-        version: 2.0.0(@nillion/nuc@2.0.0(pino@10.1.1)(typescript@5.9.3))(pino@10.1.1)
       '@nillion/nuc':
         specifier: ^2.0.0
         version: 2.0.0(pino@10.1.1)(typescript@5.9.3)
@@ -412,13 +409,6 @@ packages:
   '@nillion/blindfold@0.1.0':
     resolution: {integrity: sha512-tqdfoxk+lTTD9llr7iEyb49iWGGVlBDpF6erx8HWvrL6RZFrjr+0sN9XNZGB4OfFVa7ZsduXcAso1msAObMeuw==}
     engines: {node: '>=20'}
-
-  '@nillion/nilauth-client@2.0.0':
-    resolution: {integrity: sha512-0E/aCB4vfIHHjS94kOUdjaRlgk/c6OUpAjtAs27WjqsOWlDk1/2ZTlOmUfDMpae8JlAzTsINci7K1QZ3DEBRiw==}
-    engines: {node: '>=24'}
-    peerDependencies:
-      '@nillion/nuc': ^2.0.0
-      pino: ^10.1.0
 
   '@nillion/nuc@2.0.0':
     resolution: {integrity: sha512-nMu5bUP8d535RhF51PASiC+jkG752B50zm/fN81piJcmLDxIM92mu34iVZ4It38Y7qrpENYt6t3fTuZbKU+cRg==}
@@ -891,10 +881,6 @@ packages:
     resolution: {integrity: sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==}
     engines: {node: '>=6'}
 
-  canonicalize@2.1.0:
-    resolution: {integrity: sha512-F705O3xrsUtgt98j7leetNhTWPe+5S72rlL5O4jA1pKqBVQ/dT1O1D6PFxmSXvc0SUOinWS57DKx0I3CHrXJHQ==}
-    hasBin: true
-
   chai@6.2.2:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==}
     engines: {node: '>=18'}
@@ -1185,10 +1171,6 @@ packages:
   jsonparse@1.3.1:
     resolution: {integrity: sha512-POQXvpdL69+CluYsillJ7SUhKvytYjW9vG/GKpnf+xP8UWgYEM/RaMzHHofbALDiKbbP1W8UEYmgGl39WkPZsg==}
     engines: {'0': node >= 0.2.0}
-
-  ky@1.14.2:
-    resolution: {integrity: sha512-q3RBbsO5A5zrPhB6CaCS8ZUv+NWCXv6JJT4Em0i264G9W0fdPB8YRfnnEi7Dm7X7omAkBIPojzYJ2D1oHTHqug==}
-    engines: {node: '>=18'}
 
   lefthook-darwin-arm64@2.0.15:
     resolution: {integrity: sha512-ygAqG/NzOgY9bEiqeQtiOmCRTtp9AmOd3eyrpEaSrRB9V9f3RHRgWDrWbde9BiHSsCzcbeY9/X2NuKZ69eUsNA==}
@@ -2149,15 +2131,6 @@ snapshots:
       libsodium-wrappers-sumo: 0.8.0
       paillier-bigint: 3.4.3
 
-  '@nillion/nilauth-client@2.0.0(@nillion/nuc@2.0.0(pino@10.1.1)(typescript@5.9.3))(pino@10.1.1)':
-    dependencies:
-      '@nillion/nuc': 2.0.0(pino@10.1.1)(typescript@5.9.3)
-      '@noble/hashes': 2.0.1
-      canonicalize: 2.1.0
-      ky: 1.14.2
-      pino: 10.1.1
-      zod: 4.3.5
-
   '@nillion/nuc@2.0.0(pino@10.1.1)(typescript@5.9.3)':
     dependencies:
       '@noble/curves': 2.0.1
@@ -2524,8 +2497,6 @@ snapshots:
 
   callsites@3.1.0: {}
 
-  canonicalize@2.1.0: {}
-
   chai@6.2.2: {}
 
   chalk@4.1.2:
@@ -2793,8 +2764,6 @@ snapshots:
   json-schema-traverse@1.0.0: {}
 
   jsonparse@1.3.1: {}
-
-  ky@1.14.2: {}
 
   lefthook-darwin-arm64@2.0.15:
     optional: true
