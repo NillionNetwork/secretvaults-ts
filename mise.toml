@@ -62,17 +62,6 @@ run = "pnpm exec vitest run"
 description = "Run tests with coverage"
 run = "pnpm exec vitest run --coverage"
 
-# --- Docs ---
-
-[tasks.docs]
-description = "Generate documentation"
-run = "pnpm exec typedoc"
-
-[tasks."docs:serve"]
-description = "Generate and serve documentation"
-depends = ["docs"]
-run = "npx serve docs"
-
 # --- Docker ---
 
 [tasks.docker-up]
