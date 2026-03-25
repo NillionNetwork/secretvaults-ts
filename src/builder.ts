@@ -157,8 +157,20 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
   /**
    * Registers the builder with all nodes in the cluster.
    */
-  async register(body: RegisterBuilderRequest): Promise<ByNodeName<RegisterBuilderResponse>> {
-    const result = await executeOnCluster(this.nodes, (c) => c.register(body));
+  async register(
+    body: RegisterBuilderRequest,
+    options?: { auth?: AuthContext },
+  ): Promise<ByNodeName<RegisterBuilderResponse>> {
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
+        audience: client.id,
+        command: NucCmd.nil.db.builders.create,
+      });
+
+      return client.register(token, body);
+    });
+
     Log.info({ builder: await this.getId() }, "Builder registered");
     return result;
   }
