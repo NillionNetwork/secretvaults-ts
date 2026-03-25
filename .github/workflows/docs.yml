@@ -30,19 +30,13 @@ jobs:
         with:
           fetch-depth: 0 # Fetch all history for all branches
 
-      - uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
+      - uses: jdx/mise-action@v2
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: mise run install
 
       - name: Build documentation
-        run: npx typedoc
+        run: mise run docs
         env:
           CI: true
           NO_BROWSER: true
@@ -85,12 +79,12 @@ jobs:
               h1 { color: #333; }
               .branch-list { list-style: none; padding: 0; }
               .branch-list li { margin: 10px 0; }
-              .branch-list a { 
-                display: inline-block; 
-                padding: 8px 16px; 
-                background: #0366d6; 
-                color: white; 
-                text-decoration: none; 
+              .branch-list a {
+                display: inline-block;
+                padding: 8px 16px;
+                background: #0366d6;
+                color: white;
+                text-decoration: none;
                 border-radius: 4px;
               }
               .branch-list a:hover { background: #0256c7; }
@@ -135,7 +129,7 @@ jobs:
               const formattedSourceBranch = sourceBranch.replace('/', '-');
               const currentDocsUrl = `https://nillion.pub/secretvaults-ts/branches/${formattedSourceBranch}/`;
               const futureDocsUrl = 'https://nillion.pub/secretvaults-ts/';
-              
+
               deploymentInfo = `**Current branch documentation:** ${currentDocsUrl}\n**After merge to main:** ${futureDocsUrl}`;
               docsUrl = futureDocsUrl; // Keep main URL as primary
             } else {

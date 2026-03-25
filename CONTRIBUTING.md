@@ -10,17 +10,22 @@ We welcome contributions to the project! Here's how you can get involved:
 
 ## Development
 
-To get started with development, first install the project dependencies using `pnpm`:
+Prerequisites:
+
+- [mise](https://mise.jdx.dev/) (manages Node.js, pnpm, and prek)
+- Docker
+
+Setup:
 
 ```bash
-pnpm install
+mise run init     # Installs dependencies and configures git hooks
 ```
 
 Before submitting a pull request, please ensure all checks, tests, and formatting rules pass by running:
 
 ```bash
-pnpm check
-pnpm test
+mise run check
+mise run test
 ```
 
 ## Versioning
