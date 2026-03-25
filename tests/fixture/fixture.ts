@@ -52,13 +52,8 @@ export function createFixture(
   let fixture: FixtureContext | null = null;
 
   const it = vitest.test.extend<{ c: FixtureContext }>({
-    c: async ({ expect }, use) => {
-      const ctx: FixtureContext = {
-        ...fixture!,
-        expect,
-      };
-
-      await use(ctx);
+    c: async ({ task: _task }, use) => {
+      await use(fixture!);
     },
   });
 
@@ -146,7 +141,6 @@ async function buildContext(): Promise<FixtureContext> {
     builder,
     user,
     db,
-    // this expect gets replaced by the test's for better failure localization
     expect: vitest.expect,
   };
 }
