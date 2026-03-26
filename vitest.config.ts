@@ -11,10 +11,8 @@ export default defineConfig({
       reporter: ["text", "json-summary", "json"],
       reportOnFailure: true,
     },
-    // These force vitest to run the test suite with 1 worker
-    // side-stepping the sequence mismatch issue caused when multiple tests
-    // try and share the same Ethereum wallet
-    // ref: https://github.com/NillionNetwork/nildb/issues/174
+    // Tests share a MongoDB instance and run sequentially ordered operations,
+    // so we force a single worker to avoid race conditions.
     maxWorkers: 1,
     minWorkers: 1,
   },

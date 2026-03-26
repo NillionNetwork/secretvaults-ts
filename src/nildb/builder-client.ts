@@ -56,11 +56,12 @@ export class NilDbBuilderClient extends NilDbBaseClient {
   /**
    * Registers a new builder.
    */
-  register(body: RegisterBuilderRequest): Promise<RegisterBuilderResponse> {
+  register(token: string, body: RegisterBuilderRequest): Promise<RegisterBuilderResponse> {
     return this.request({
       path: NilDbEndpoint.v1.builders.register,
       method: "POST",
       body,
+      token,
       responseSchema: RegisterBuilderResponse,
     });
   }

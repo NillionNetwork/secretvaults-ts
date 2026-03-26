@@ -22,11 +22,8 @@ jobs:
       version: ${{ steps.check-version.outputs.local_version }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - uses: pnpm/action-setup@v4
-      - run: pnpm install
+      - uses: jdx/mise-action@v2
+      - run: mise run install
       - id: check-version
         run: pnpm exec tsx bin/check-version.ts
 
@@ -40,8 +37,8 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-      - uses: pnpm/action-setup@v4
-      - run: pnpm install
-      - run: pnpm check
-      - run: pnpm build
+      - uses: jdx/mise-action@v2
+      - run: mise run install
+      - run: mise run check
+      - run: mise run build
       - run: pnpm publish --provenance --access public

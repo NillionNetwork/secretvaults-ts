@@ -8,26 +8,16 @@ The library exposes two main clients: `SecretVaultBuilderClient` and `SecretVaul
 
 ### Builder Client
 
-The `SecretVaultBuilderClient` is used by data producers to manage collections, queries, and standard data. It requires a `nilauthClient` for obtaining root tokens.
+The `SecretVaultBuilderClient` is used by data producers to manage collections, queries, and standard data.
 
 ```typescript
 import { Signer } from "@nillion/nuc";
-import { NilauthClient } from "@nillion/nilauth-client";
 import { SecretVaultBuilderClient } from "@nillion/secretvaults";
 
-const builderSigner = Signer.generate();
-const nilauthClient = await NilauthClient.create({
-  /* ... nilauth options ... */
-});
-
 const builderClient = await SecretVaultBuilderClient.from({
-  signer: builderSigner,
+  signer: Signer.generate(),
   dbs: ["http://localhost:40081", "http://localhost:40082"],
-  nilauthClient,
 });
-
-// The builder client must fetch a root token before making authenticated calls.
-await builderClient.refreshRootToken();
 ```
 
 ### User Client
@@ -38,10 +28,8 @@ The `SecretVaultUserClient` is used by data owners to manage their "owned" data,
 import { Signer } from "@nillion/nuc";
 import { SecretVaultUserClient } from "@nillion/secretvaults";
 
-const userSigner = Signer.generate();
-
 const userClient = await SecretVaultUserClient.from({
-  signer: userSigner,
+  signer: Signer.generate(),
   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
 });
 ```
@@ -62,20 +50,22 @@ The `AuthContext` allows you to provide one of the following mutually exclusive 
 
 ```typescript
 import { Builder, NucCmd } from "@nillion/secretvaults";
+import type { Command } from "@nillion/nuc";
 
 // 1. Pre-mint invocations for each node in the cluster
-const nildbTokens: Record<string, string> = {};
+const invocations: Record<string, string> = {};
 for (const node of builderClient.nodes) {
-  const token = await Builder.invocationFrom(builderClient.rootToken)
+  invocations[node.id.didString] = await Builder.invocation()
+    .subject(await builderClient.getDid())
     .audience(node.id)
-    .command(NucCmd.nil.db.builders.read)
+    .command(NucCmd.nil.db.builders.read as Command)
+    .expiresIn(30_000)
     .signAndSerialize(builderClient.signer);
-  nildbTokens[node.id.didString] = token;
 }
 
 // 2. Pass the map to the authenticated method to perform the operation without re-signing
 const profile = await builderClient.readProfile({
-  auth: { invocations: nildbTokens },
+  auth: { invocations },
 });
 ```
 
@@ -96,70 +86,4 @@ const client = await SecretVaultUserClient.from({
   signer: nillionSigner,
   baseUrls: ["http://localhost:40081", "http://localhost:40082"],
 });
-```
-
-## Client Re-hydration (Instant Login)
-
-To provide a seamless user experience without requiring re-authentication on every page load, you can re-hydrate the `SecretVaultBuilderClient` with a previously fetched root token. This is useful for storing the session in `localStorage`.
-
-**Example Workflow:**
-
-1.  **First Login**: The user authenticates, and you fetch a new root token using `refreshRootToken()`.
-2.  **Store Token**: Serialize the token and store it in `localStorage`.
-3.  **Subsequent Visits**: On the next visit, create the client instance by passing the stored token string directly to the `from()` method. This bypasses the need to call `refreshRootToken()`.
-
-```typescript
-import { Codec, Signer } from "@nillion/nuc";
-import { NilauthClient } from "@nillion/nilauth-client";
-import { SecretVaultBuilderClient } from "@nillion/secretvaults";
-
-const dbs = ["http://localhost:40081", "http://localhost:40082"];
-
-// --- On initial login ---
-async function initialLogin() {
-  const signer = Signer.generate();
-  const nilauthClient = await NilauthClient.create({
-    /* ... */
-  });
-  const builderClient = await SecretVaultBuilderClient.from({
-    signer,
-    nilauthClient,
-    dbs,
-  });
-
-  // Fetch a new token from NilAuth
-  await builderClient.refreshRootToken();
-
-  // Serialize the root token for storage
-  const rootTokenString = Codec.serializeBase64Url(builderClient.rootToken);
-  localStorage.setItem("nillion-root-token", rootTokenString);
-
-  return builderClient;
-}
-
-// --- On subsequent page loads ---
-async function subsequentLogin() {
-  const storedToken = localStorage.getItem("nillion-root-token");
-  if (!storedToken) {
-    // Handle case where token is not available
-    return initialLogin();
-  }
-
-  const signer = Signer.generate(); // The signer is still required
-  const nilauthClient = await NilauthClient.create({
-    /* ... */
-  });
-
-  // Re-hydrate the client instantly using the stored token
-  const builderClient = await SecretVaultBuilderClient.from({
-    signer,
-    nilauthClient,
-    dbs,
-    rootToken: storedToken,
-  });
-
-  // No need to call `refreshRootToken()`
-
-  return builderClient;
-}
 ```

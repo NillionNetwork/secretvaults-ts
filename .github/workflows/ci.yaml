@@ -13,29 +13,26 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: "recursive"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - uses: pnpm/action-setup@v4
-      - run: pnpm install
-      - run: pnpm check
-      - run: pnpm build
-      - run: pnpm attw --pack
+      - uses: jdx/mise-action@v2
+      - run: mise run install
+      - run: mise run check
+      - run: mise run build
+      - run: mise run attw
+
   test:
     needs: check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - uses: pnpm/action-setup@v4
-      - run: pnpm install
-      - run: pnpm vitest --coverage
+      - uses: jdx/mise-action@v2
+      - run: mise run install
+      - run: mise run test-coverage
       - uses: davelosert/vitest-coverage-report-action@v2
         if: always()
         with:

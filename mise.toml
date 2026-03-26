@@ -1,0 +1,85 @@
+[tools]
+node = "24"
+pnpm = "10"
+prek = "latest"
+
+[tasks.install]
+description = "Install dependencies"
+run = "pnpm install"
+
+[tasks.init]
+description = "Setup repository (install deps and git hooks)"
+depends = ["install"]
+run = "prek install"
+
+# --- Quality ---
+
+[tasks.fmt]
+description = "Format all files"
+run = "pnpm exec oxfmt"
+
+[tasks."fmt:check"]
+description = "Check formatting"
+run = "pnpm exec oxfmt --check"
+
+[tasks.lint]
+description = "Lint and auto-fix"
+run = "pnpm exec oxlint --fix --type-aware"
+
+[tasks."lint:check"]
+description = "Lint (no auto-fix)"
+run = "pnpm exec oxlint --type-aware"
+
+[tasks.typecheck]
+description = "Type check"
+run = "pnpm exec tsgo -b"
+
+[tasks.check]
+description = "Format check + lint + type check"
+depends = ["fmt:check", "lint:check", "typecheck"]
+
+[tasks.fix]
+description = "Auto-fix formatting and lint issues"
+depends = ["fmt", "lint", "typecheck"]
+
+# --- Build ---
+
+[tasks.build]
+description = "Build the library"
+run = "pnpm exec tsup"
+
+[tasks.attw]
+description = "Check package types with attw"
+run = "pnpm exec attw --profile esm-only --pack ."
+
+# --- Testing ---
+
+[tasks.test]
+description = "Run all tests"
+run = "pnpm exec vitest run"
+
+[tasks.test-coverage]
+description = "Run tests with coverage"
+run = "pnpm exec vitest run --coverage"
+
+# --- Docker ---
+
+[tasks.docker-up]
+description = "Start test infrastructure"
+dir = "tests/fixture/docker"
+run = "docker compose --project-name secretvaults-tests up -d"
+
+[tasks.docker-down]
+description = "Stop test infrastructure"
+dir = "tests/fixture/docker"
+run = "docker compose --project-name secretvaults-tests down"
+
+# --- Cleanup ---
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = """
+rm -rf dist
+rm -rf node_modules
+rm -rf coverage
+"""

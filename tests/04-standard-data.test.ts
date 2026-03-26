@@ -13,7 +13,6 @@ import { waitForQueryRun } from "./fixture/utils";
 
 describe("standard-data.test.ts", () => {
   const { test, beforeAll, afterAll } = createFixture({
-    activateBuilderSubscription: true,
     keepDbs: false,
   });
 

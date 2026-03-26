@@ -42,8 +42,7 @@ import type {
 } from "#/dto/queries.dto";
 import { Log } from "#/logger";
 
-import type { NilauthClient, SubscriptionStatusResponse } from "@nillion/nilauth-client";
-import { Builder, Codec, type Envelope, type Did as NucDid, type Signer, Validator } from "@nillion/nuc";
+import { Builder, type Command, type Did as NucDid, type Signer, Validator } from "@nillion/nuc";
 
 import { type BlindfoldFactoryConfig, toBlindfoldKey } from "./common/blindfold";
 import {
@@ -58,10 +57,7 @@ import { createNilDbBuilderClient, type NilDbBuilderClient } from "./nildb/build
 /**
  *
  */
-export type SecretVaultBuilderOptions = SecretVaultBaseOptions<NilDbBuilderClient> & {
-  nilauthClient: NilauthClient;
-  rootToken?: Envelope | string;
-};
+export type SecretVaultBuilderOptions = SecretVaultBaseOptions<NilDbBuilderClient>;
 
 /**
  * Client for performing builder operations on SecretVaults.
@@ -78,7 +74,6 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    * // Basic instantiation with an auto-generated key
    * const builderClient = await SecretVaultBuilderClient.from({
    *   signer: Signer.generate(),
-   *   nilauthClient,
    *   dbs: ["http://localhost:40081", "http://localhost:40082"],
    * });
    *
@@ -91,18 +86,15 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
    *
    * const clientWithSigner = await SecretVaultBuilderClient.from({
    *   signer: customSigner,
-   *   nilauthClient,
    *   dbs: ["http://localhost:40081", "http://localhost:40082"],
    * });
    */
   static async from(options: {
     signer: Signer;
-    nilauthClient: NilauthClient;
     dbs: string[];
     blindfold?: BlindfoldFactoryConfig;
-    rootToken?: Envelope | string;
   }): Promise<SecretVaultBuilderClient> {
-    const { dbs: baseUrls, signer, blindfold, nilauthClient, rootToken } = options;
+    const { dbs: baseUrls, signer, blindfold } = options;
 
     const did = await signer.getDid();
 
@@ -127,8 +119,6 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
           clients,
           signer,
           key: blindfold.key,
-          nilauthClient,
-          rootToken,
         });
       } else {
         // Create a new key
@@ -141,8 +131,6 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
           clients,
           signer,
           key,
-          nilauthClient,
-          rootToken,
         });
       }
     } else {
@@ -150,8 +138,6 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
       client = new SecretVaultBuilderClient({
         clients,
         signer,
-        nilauthClient,
-        rootToken,
       });
     }
 
@@ -168,55 +154,23 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
     return client;
   }
 
-  #rootToken: Envelope | null = null;
-  #nilauthClient: NilauthClient;
-
-  constructor(options: SecretVaultBuilderOptions) {
-    super(options);
-    this.#nilauthClient = options.nilauthClient;
-
-    // Handle rootToken re-hydration
-    if (options.rootToken) {
-      if (typeof options.rootToken === "string") {
-        this.#rootToken = Codec._unsafeDecodeBase64Url(options.rootToken);
-        Log.debug("Root token re-hydrated using _unsafeDecodeBase64Url(string)");
-      } else {
-        this.#rootToken = options.rootToken;
-        Log.debug("Root token re-hydrated from Envelope object");
-      }
-    }
-  }
-
-  get rootToken(): Envelope {
-    if (!this.#rootToken) {
-      throw new Error("`refreshRootToken` must be called first");
-    }
-    return this.#rootToken;
-  }
-
-  /**
-   * Fetches a new root NUC token from the configured nilAuth server.
-   */
-  async refreshRootToken(): Promise<void> {
-    Log.debug("Refreshing root token");
-    const response = await this.#nilauthClient.requestToken(this._options.signer, "nildb");
-
-    this.#rootToken = response.token;
-    Log.info({ builder: await this.getId() }, "Root token refreshed");
-  }
-
-  /**
-   * Checks subscription status by the builder's Did.
-   */
-  async subscriptionStatus(): Promise<SubscriptionStatusResponse> {
-    return this.#nilauthClient.subscriptionStatus(await this.getDid(), "nildb");
-  }
-
   /**
    * Registers the builder with all nodes in the cluster.
    */
-  async register(body: RegisterBuilderRequest): Promise<ByNodeName<RegisterBuilderResponse>> {
-    const result = await executeOnCluster(this.nodes, (c) => c.register(body));
+  async register(
+    body: RegisterBuilderRequest,
+    options?: { auth?: AuthContext },
+  ): Promise<ByNodeName<RegisterBuilderResponse>> {
+    const result = await executeOnCluster(this.nodes, async (client) => {
+      const token = await this.getInvocationFor({
+        auth: options?.auth,
+        audience: client.id,
+        command: NucCmd.nil.db.builders.create,
+      });
+
+      return client.register(token, body);
+    });
+
     Log.info({ builder: await this.getId() }, "Builder registered");
     return result;
   }
@@ -774,15 +728,12 @@ export class SecretVaultBuilderClient extends SecretVaultBaseClient<NilDbBuilder
         .signAndSerialize(signer);
     }
 
-    // Fallback to root token - also cap to remaining lifetime
-    const rootExp = this.rootToken.nuc.payload.exp;
-    const remainingMs = rootExp ? rootExp * 1000 - Date.now() - expiryBuffer : defaultExpiresIn;
-    const expiresIn = Math.min(defaultExpiresIn, Math.max(1_000, remainingMs));
-
-    return Builder.invocationFrom(this.rootToken)
-      .command(command)
-      .expiresIn(expiresIn)
+    // Fallback to self-signed invocation
+    return Builder.invocation()
+      .command(command as Command)
+      .subject(await this.getDid())
       .audience(audience)
+      .expiresIn(defaultExpiresIn)
       .signAndSerialize(signer);
   }
 }

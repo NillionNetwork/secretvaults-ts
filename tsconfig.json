@@ -3,6 +3,7 @@
 
   "compilerOptions": {
     "noEmit": true,
+    "ignoreDeprecations": "6.0",
 
     "lib": ["es2022"],
     "module": "es2022",
