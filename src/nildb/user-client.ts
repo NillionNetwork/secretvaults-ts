@@ -13,6 +13,8 @@ import {
   ReadUserProfileResponse,
   type RevokeAccessToDataRequest,
   RevokeAccessToDataResponse,
+  type UpdateUserDataRequest,
+  UpdateUserDataResponse,
 } from "#/dto/users.dto";
 import { z } from "zod";
 
@@ -81,6 +83,22 @@ export class NilDbUserClient extends NilDbBaseClient {
         .replace(":document", params.document),
       token,
       responseSchema: ReadDataResponse,
+    });
+  }
+
+  /**
+   * Updates user-owned data by collection and document id.
+   */
+  updateData(
+    token: string,
+    body: UpdateUserDataRequest,
+  ): Promise<UpdateUserDataResponse> {
+    return this.request({
+      path: NilDbEndpoint.v1.users.data.root,
+      method: "POST",
+      token,
+      body,
+      responseSchema: UpdateUserDataResponse,
     });
   }
 
